@@ -1,5 +1,8 @@
 # SvelteKit WebSocket
 
+
+> This package is a fork of [sveltekit-ws](https://github.com/ketarketir/sveltekit-ws) by [ketarketir](https://github.com/ketarketir), licensed under MIT.
+
 WebSocket integration for SvelteKit without external server - seamlessly works in both development and production.
 
 ## Features

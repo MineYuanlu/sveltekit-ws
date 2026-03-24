@@ -1,13 +1,13 @@
 {
-  "name": "sveltekit-ws",
-  "version": "1.0.1",
+  "name": "@yuanlu_yl/sveltekit-ws",
+  "version": "1.1.0",
   "description": "WebSocket integration for SvelteKit without external server",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ketarketir/sveltekit-ws.git",
+    "url": "git+https://github.com/MineYuanlu/sveltekit-ws.git",
     "directory": "packages/sveltekit-ws"
   },
   "exports": {

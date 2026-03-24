@@ -7,6 +7,7 @@ export interface WSConnection {
     ws: WebSocket;
     id: string;
     metadata?: Record<string, any>;
+    handler?: WSHandlers;
 }
 
 /**
@@ -17,6 +18,11 @@ export interface WSMessage<T = any> {
     data: T;
     timestamp?: number;
 }
+
+/**
+ * WebSocket 日志函数
+ */
+export type WSLogFunction = (msg:{type: "info" | "warn" | "error"; message: string; id?: string;  }) => void;
 
 /**
  * WebSocket 事件处理器

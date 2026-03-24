@@ -1,5 +1,5 @@
 import type { WebSocket } from 'ws';
-import type { WSConnection, WSMessage, WSManager } from './types.js';
+import type { WSConnection, WSMessage, WSManager, WSHandlers, WSLogFunction } from './types.js';
 import { randomUUID } from 'crypto';
 
 /**
@@ -7,6 +7,10 @@ import { randomUUID } from 'crypto';
  */
 export class WebSocketManager implements WSManager {
     private connections: Map<string, WSConnection> = new Map();
+
+    private handlers: Map<string, WSHandlers> = new Map();
+    
+    private logger: WSLogFunction | undefined; 
 
     /**
      * 添加新连接
@@ -31,6 +35,43 @@ export class WebSocketManager implements WSManager {
     getConnection(id: string): WSConnection | undefined {
         return this.connections.get(id);
     }
+
+    /**
+     * 添加事件处理器
+     */
+    addHandler(id:string,handler: WSHandlers): void {
+        this.handlers.set(id, handler);
+    }
+
+    /**
+     * 获取事件处理器
+     */
+    getHandler(id:string): WSHandlers | undefined {
+        return this.handlers.get(id);
+    }
+
+    /**
+     * 是否存在事件处理器
+     */
+    hasHandler(id:string): boolean {
+        return this.handlers.has(id);
+    }
+
+    /**
+     * 设置日志记录器
+     */
+    setLogger(logger: WSLogFunction | undefined): void {
+        this.logger = logger;
+    }
+
+    /**
+     * 获取日志记录器
+     */
+    log(message: Parameters<WSLogFunction>[0]): void {
+        this.logger?.(message);
+    }
+
+
 
     /**
      * 发送消息到特定连接

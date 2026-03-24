@@ -6,7 +6,7 @@ import type { WSServerOptions } from './types.js';
 import { getWebSocketManager } from './manager.js';
 
 /**
- * Create Vite plugin for WebSocket integration in development
+ * 为开发环境创建 Vite WebSocket 插件
  */
 export function webSocketServer(options: WSServerOptions = {}): Plugin {
     const {
@@ -26,7 +26,7 @@ export function webSocketServer(options: WSServerOptions = {}): Plugin {
         name: 'sveltekit-websocket',
 
         configureServer(server: ViteDevServer) {
-            // Create WebSocket server
+            // 创建 WebSocket 服务器
             wss = new WebSocketServer({
                 noServer: true,
                 maxPayload,
@@ -39,7 +39,7 @@ export function webSocketServer(options: WSServerOptions = {}): Plugin {
                     : undefined
             });
 
-            // Handle WebSocket upgrade
+            // 处理 WebSocket 升级
             server.httpServer?.on('upgrade', async (
                 request: IncomingMessage,
                 socket: Duplex,
@@ -54,7 +54,7 @@ export function webSocketServer(options: WSServerOptions = {}): Plugin {
                 }
             });
 
-            // Handle new connections
+            // 处理新连接
             wss.on('connection', async (ws: WebSocket, request: IncomingMessage) => {
                 const connection = manager.addConnection(ws, {
                     url: request.url,
@@ -64,14 +64,14 @@ export function webSocketServer(options: WSServerOptions = {}): Plugin {
 
                 console.log(`[WS] Client connected: ${connection.id}`);
 
-                // Call onConnect handler
+                // 调用 onConnect 处理器
                 try {
                     await handlers.onConnect?.(connection);
                 } catch (error) {
                     console.error('[WS] Error in onConnect handler:', error);
                 }
 
-                // Setup heartbeat
+                // 设置心跳
                 if (heartbeat) {
                     const timer = setInterval(() => {
                         if (ws.readyState === WebSocket.OPEN) {
@@ -81,7 +81,7 @@ export function webSocketServer(options: WSServerOptions = {}): Plugin {
                     heartbeatTimers.set(connection.id, timer);
                 }
 
-                // Handle messages
+                // 处理消息
                 ws.on('message', async (rawData) => {
                     try {
                         const message = JSON.parse(rawData.toString());
@@ -92,17 +92,17 @@ export function webSocketServer(options: WSServerOptions = {}): Plugin {
                     }
                 });
 
-                // Handle errors
+                // 处理错误
                 ws.on('error', async (error) => {
                     console.error(`[WS] WebSocket error for ${connection.id}:`, error);
                     await handlers.onError?.(connection, error);
                 });
 
-                // Handle disconnect
+                // 处理断开连接
                 ws.on('close', async () => {
                     console.log(`[WS] Client disconnected: ${connection.id}`);
 
-                    // Clear heartbeat
+                    // 清除心跳
                     const timer = heartbeatTimers.get(connection.id);
                     if (timer) {
                         clearInterval(timer);
@@ -123,7 +123,7 @@ export function webSocketServer(options: WSServerOptions = {}): Plugin {
         },
 
         closeBundle() {
-            // Cleanup on server close
+            // 服务器关闭时清理
             heartbeatTimers.forEach((timer) => clearInterval(timer));
             heartbeatTimers.clear();
             manager.clear();

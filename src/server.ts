@@ -6,7 +6,7 @@ import type { WSServerOptions } from './types.js';
 import { getWebSocketManager } from './manager.js';
 
 /**
- * Create WebSocket handler for production server
+ * 为生产服务器创建 WebSocket 处理器
  */
 export function createWebSocketHandler(
     httpServer: HTTPServer,
@@ -36,7 +36,7 @@ export function createWebSocketHandler(
     const manager = getWebSocketManager();
     const heartbeatTimers = new Map<string, NodeJS.Timeout>();
 
-    // Handle upgrade requests
+    // 处理升级请求
     httpServer.on('upgrade', (
         request: IncomingMessage,
         socket: Duplex,
@@ -53,7 +53,7 @@ export function createWebSocketHandler(
         }
     });
 
-    // Handle connections
+    // 处理连接
     wss.on('connection', async (ws: WebSocket, request: IncomingMessage) => {
         const connection = manager.addConnection(ws, {
             url: request.url,
@@ -69,7 +69,7 @@ export function createWebSocketHandler(
             console.error('[WS] Error in onConnect handler:', error);
         }
 
-        // Setup heartbeat
+        // 设置心跳
         if (heartbeat) {
             const timer = setInterval(() => {
                 if (ws.readyState === WebSocket.OPEN) {
@@ -79,7 +79,7 @@ export function createWebSocketHandler(
             heartbeatTimers.set(connection.id, timer);
         }
 
-        // Handle messages
+        // 处理消息
         ws.on('message', async (rawData) => {
             try {
                 const message = JSON.parse(rawData.toString());
@@ -90,13 +90,13 @@ export function createWebSocketHandler(
             }
         });
 
-        // Handle errors
+        // 处理错误
         ws.on('error', async (error) => {
             console.error(`[WS] WebSocket error for ${connection.id}:`, error);
             await handlers.onError?.(connection, error);
         });
 
-        // Handle disconnect
+        // 处理断开连接
         ws.on('close', async () => {
             console.log(`[WS] Client disconnected: ${connection.id}`);
 
@@ -118,7 +118,7 @@ export function createWebSocketHandler(
 
     console.log(`[WS] WebSocket server initialized at ${path}`);
 
-    // Return cleanup function
+    // 返回清理函数
     return () => {
         heartbeatTimers.forEach((timer) => clearInterval(timer));
         heartbeatTimers.clear();

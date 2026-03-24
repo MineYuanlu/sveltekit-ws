@@ -3,13 +3,13 @@ import type { WSConnection, WSMessage, WSManager } from './types.js';
 import { randomUUID } from 'crypto';
 
 /**
- * WebSocket Manager implementation
+ * WebSocket 管理器实现
  */
 export class WebSocketManager implements WSManager {
     private connections: Map<string, WSConnection> = new Map();
 
     /**
-     * Add new connection
+     * 添加新连接
      */
     addConnection(ws: WebSocket, metadata?: Record<string, any>): WSConnection {
         const id = randomUUID();
@@ -19,21 +19,21 @@ export class WebSocketManager implements WSManager {
     }
 
     /**
-     * Get all active connections
+     * 获取所有活跃连接
      */
     getConnections(): Map<string, WSConnection> {
         return new Map(this.connections);
     }
 
     /**
-     * Get connection by ID
+     * 通过ID获取连接
      */
     getConnection(id: string): WSConnection | undefined {
         return this.connections.get(id);
     }
 
     /**
-     * Send message to specific connection
+     * 发送消息到特定连接
      */
     send(id: string, message: WSMessage): boolean {
         const connection = this.connections.get(id);
@@ -55,7 +55,7 @@ export class WebSocketManager implements WSManager {
     }
 
     /**
-     * Broadcast message to all connections
+     * 广播消息到所有连接
      */
     broadcast(message: WSMessage, exclude: string[] = []): void {
         const payload = JSON.stringify({
@@ -76,14 +76,14 @@ export class WebSocketManager implements WSManager {
     }
 
     /**
-     * Remove connection
+     * 移除连接
      */
     removeConnection(id: string): boolean {
         return this.connections.delete(id);
     }
 
     /**
-     * Disconnect a specific connection
+     * 断开特定连接
      */
     disconnect(id: string): boolean {
         const connection = this.connections.get(id);
@@ -100,14 +100,14 @@ export class WebSocketManager implements WSManager {
     }
 
     /**
-     * Get number of active connections
+     * 获取活跃连接数
      */
     size(): number {
         return this.connections.size;
     }
 
     /**
-     * Clear all connections
+     * 清除所有连接
      */
     clear(): void {
         this.connections.forEach((connection) => {
@@ -121,11 +121,11 @@ export class WebSocketManager implements WSManager {
     }
 }
 
-// Global singleton instance
+// 全局单例实例
 let globalManager: WebSocketManager | null = null;
 
 /**
- * Get or create global WebSocket manager
+ * 获取或创建全局 WebSocket 管理器
  */
 export function getWebSocketManager(): WebSocketManager {
     if (!globalManager) {

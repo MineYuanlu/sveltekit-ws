@@ -7,6 +7,6 @@ export type {
     WSManager
 } from './types.js';
 
-// Re-export for convenience
+// 为方便起见重新导出
 export { webSocketServer } from './vite.js';
 export { createWebSocketHandler } from './server.js';

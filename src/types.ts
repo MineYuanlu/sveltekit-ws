@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws';
 
 /**
- * WebSocket connection with metadata
+ * WebSocket 连接及其元数据
  */
 export interface WSConnection {
     ws: WebSocket;
@@ -10,7 +10,7 @@ export interface WSConnection {
 }
 
 /**
- * WebSocket message structure
+ * WebSocket 消息结构
  */
 export interface WSMessage<T = any> {
     type: string;
@@ -19,7 +19,7 @@ export interface WSMessage<T = any> {
 }
 
 /**
- * WebSocket event handlers
+ * WebSocket 事件处理器
  */
 export interface WSHandlers {
     onConnect?: (connection: WSConnection) => void | Promise<void>;
@@ -29,40 +29,40 @@ export interface WSHandlers {
 }
 
 /**
- * WebSocket server options
+ * WebSocket 服务器选项
  */
 export interface WSServerOptions {
     /**
-     * Path to handle WebSocket connections
+     * WebSocket 连接路径
      * @default '/ws'
      */
     path?: string;
 
     /**
-     * Event handlers
+     * 事件处理器
      */
     handlers?: WSHandlers;
 
     /**
-     * Maximum message size in bytes
+     * 最大消息大小（字节）
      * @default 1048576 (1MB)
      */
     maxPayload?: number;
 
     /**
-     * Enable ping/pong heartbeat
+     * 启用 ping/pong 心跳
      * @default true
      */
     heartbeat?: boolean;
 
     /**
-     * Heartbeat interval in milliseconds
+     * 心跳间隔（毫秒）
      * @default 30000
      */
     heartbeatInterval?: number;
 
     /**
-     * Custom connection validator
+     * 自定义连接验证器
      */
     verifyClient?: (info: {
         origin: string;
@@ -72,36 +72,36 @@ export interface WSServerOptions {
 }
 
 /**
- * WebSocket manager for handling connections
+ * WebSocket 连接管理器
  */
 export interface WSManager {
     /**
-     * Get all active connections
+     * 获取所有活跃连接
      */
     getConnections(): Map<string, WSConnection>;
 
     /**
-     * Get connection by ID
+     * 通过ID获取连接
      */
     getConnection(id: string): WSConnection | undefined;
 
     /**
-     * Send message to specific connection
+     * 发送消息到特定连接
      */
     send(id: string, message: WSMessage): boolean;
 
     /**
-     * Broadcast message to all connections
+     * 广播消息到所有连接
      */
     broadcast(message: WSMessage, exclude?: string[]): void;
 
     /**
-     * Disconnect a specific connection
+     * 断开特定连接
      */
     disconnect(id: string): boolean;
 
     /**
-     * Get number of active connections
+     * 获取活跃连接数
      */
     size(): number;
 }

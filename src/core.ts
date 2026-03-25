@@ -49,13 +49,16 @@ function create(options: WSServerOptions = {}) {
         httpServer.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
             const url = new URL(request.url || '', `http://${request.headers.host}`);
 
-            if (url.pathname === path && manager.getMainHandler()) {
-                wss.handleUpgrade(request, socket, head, (ws) => {
-                    wss.emit('connection', ws, request);
-                });
-            } else {
+            if (url.pathname !== path) return;
+
+            if (!manager.getMainHandler()) {
                 socket.destroy();
+                return;
             }
+
+            wss.handleUpgrade(request, socket, head, (ws) => {
+                wss.emit('connection', ws, request);
+            });
         });
 
         // 处理连接

@@ -2,6 +2,12 @@
 
 本项目 fork 自 [ketarketir/sveltekit-ws](https://github.com/ketarketir/sveltekit-ws)，基于 MIT 协议。
 
+## [1.3.1] - 2026-03-25
+
+### 修复
+
+- **开发环境 HMR 冲突**：修复 Vite dev 模式下误拦截 Vite HMR WebSocket 连接的问题。原先 `upgrade` 事件处理逻辑在路径不匹配时未正确退出，导致 Vite 自身的 WebSocket 连接被错误销毁；现在仅对匹配 `path` 的请求进行处理，其余请求放行。
+
 ## [1.3.0] - 2026-03-25
 
 本版本为 fork 后的首个独立发布版本（包名 `@yuanlu_yl/sveltekit-ws`），包含架构重构、新特性及文档完善。

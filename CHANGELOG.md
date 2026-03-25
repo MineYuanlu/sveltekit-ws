@@ -2,6 +2,13 @@
 
 本项目 fork 自 [ketarketir/sveltekit-ws](https://github.com/ketarketir/sveltekit-ws)，基于 MIT 协议。
 
+## [1.3.2] - 2026-03-25
+
+### 重构
+
+- **连接对象封装**：将 `WSConnection` 从普通对象改为 `WebSocketConnection` 类，将 `send`、`sendRaw`、`disconnect` 等方法封装到连接实例中，提升了代码内聚性和可维护性。
+- **发送逻辑简化**：`WSManager` 的 `send` 和 `broadcast` 方法现在直接调用连接对象的方法，减少重复代码和直接操作底层 WebSocket 状态检查。
+
 ## [1.3.1] - 2026-03-25
 
 ### 修复

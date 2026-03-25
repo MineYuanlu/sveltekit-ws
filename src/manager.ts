@@ -4,6 +4,59 @@ import type { WSConnection, WSMessage, WSManager, WSHandlers, WSLogFunction } fr
 const IdPrefix = Math.random().toString(36).substring(2);
 let IdIndex = 0;
 
+class WebSocketConnection implements WSConnection {
+    constructor(
+        public ws: WebSocket,
+        public id: string,
+        public metadata?: Record<string, any>,
+    ) {}
+
+    /**
+     * 发送消息
+     */
+    send(message: WSMessage): boolean {
+        if (this.ws.readyState !== 1) {
+            return false;
+        }
+
+        try {
+            const payload = JSON.stringify({
+                ...message,
+                timestamp: message.timestamp || Date.now(),
+            });
+            this.ws.send(payload);
+            return true;
+        } catch (err) {
+            getWebSocketManager().log(
+                'error',
+                { err, connection: this.id },
+                'Failed to send message',
+            );
+            return false;
+        }
+    }
+
+    sendRaw(payload: string): boolean {
+        if (this.ws.readyState !== 1) {
+            return false;
+        }
+        try {
+            this.ws.send(payload);
+            return true;
+        } catch (err) {
+            getWebSocketManager().log(
+                'error',
+                { err, connection: this.id },
+                'Failed to send message',
+            );
+            return false;
+        }
+    }
+
+    disconnect(): boolean {
+        return getWebSocketManager().disconnect(this.id);
+    }
+}
 /**
  * WebSocket 管理器实现
  */
@@ -29,7 +82,7 @@ export class WebSocketManager implements WSManager {
      */
     addConnection(ws: WebSocket, metadata?: Record<string, any>): WSConnection {
         const id = `${IdPrefix}-${++IdIndex}`;
-        const connection: WSConnection = { ws, id, metadata };
+        const connection = new WebSocketConnection(ws, id, metadata);
         this.connections.set(id, connection);
         return connection;
     }
@@ -78,21 +131,10 @@ export class WebSocketManager implements WSManager {
      */
     send(id: string, message: WSMessage): boolean {
         const connection = this.connections.get(id);
-        if (!connection || connection.ws.readyState !== 1) {
+        if (!connection) {
             return false;
         }
-
-        try {
-            const payload = JSON.stringify({
-                ...message,
-                timestamp: message.timestamp || Date.now(),
-            });
-            connection.ws.send(payload);
-            return true;
-        } catch (err) {
-            this.log('error', { err, connection: id }, 'Failed to send message');
-            return false;
-        }
+        return connection.send(message);
     }
 
     /**
@@ -106,13 +148,7 @@ export class WebSocketManager implements WSManager {
 
         this.connections.forEach((connection, id) => {
             if (exclude.includes(id)) return;
-            if (connection.ws.readyState === 1) {
-                try {
-                    connection.ws.send(payload);
-                } catch (err) {
-                    this.log('error', { err, connection: id }, 'Failed to broadcast');
-                }
-            }
+            connection.sendRaw(payload);
         });
     }
 

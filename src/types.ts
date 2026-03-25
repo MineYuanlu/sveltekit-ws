@@ -9,6 +9,16 @@ export interface WSConnection {
     metadata?: Record<string, any>;
     /** 事件处理器: 在多处理器模式下, 用于指定此连接被哪个 */
     handler?: WSHandlers;
+
+    /**
+     * 发送消息
+     *
+     * @return 是否发送成功
+     */
+    send(message: WSMessage): boolean;
+    sendRaw(payload: string): boolean;
+
+    disconnect(): boolean;
 }
 
 /**

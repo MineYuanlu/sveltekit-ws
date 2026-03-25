@@ -1,59 +1,53 @@
 {
-  "name": "@yuanlu_yl/sveltekit-ws",
-  "version": "1.2.0",
-  "description": "WebSocket integration for SvelteKit without external server",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/MineYuanlu/sveltekit-ws.git",
-    "directory": "packages/sveltekit-ws"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+    "name": "@yuanlu_yl/sveltekit-ws",
+    "version": "1.3.0",
+    "description": "WebSocket integration for SvelteKit without external server",
+    "type": "module",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/MineYuanlu/sveltekit-ws.git",
+        "directory": "packages/sveltekit-ws"
     },
-    "./vite": {
-      "types": "./dist/vite.d.ts",
-      "import": "./dist/vite.js"
+    "exports": {
+        "./client": {
+            "types": "./dist/client.d.ts",
+            "import": "./dist/client.js"
+        },
+        "./server": {
+            "types": "./dist/server.d.ts",
+            "import": "./dist/server.js"
+        }
     },
-    "./server": {
-      "types": "./dist/server.d.ts",
-      "import": "./dist/server.js"
-    }
-  },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "prepublishOnly": "pnpm run build",
-    "test": "vitest"
-  },
-  "keywords": [
-    "sveltekit",
-    "websocket",
-    "ws",
-    "real-time"
-  ],
-  "peerDependencies": {
-    "@sveltejs/kit": "^2.48.5",
-    "vite": "^7.2.2 || ^8.0.0"
-  },
-  "dependencies": {
-    "ws": "^8.18.3"
-  },
-  "devDependencies": {
-    "@sveltejs/kit": "^2.48.5",
-    "@types/node": "^24.10.1",
-    "@types/ws": "^8.18.1",
-    "tsup": "^8.5.1",
-    "typescript": "^5.9.3",
-    "vite": "^7.2.2",
-    "vitest": "^4.0.10"
-  },
-  "packageManager": "pnpm@10.22.0+sha512.bf049efe995b28f527fd2b41ae0474ce29186f7edcb3bf545087bd61fbbebb2bf75362d1307fda09c2d288e1e499787ac12d4fcb617a974718a6051f2eee741c"
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "prepublishOnly": "pnpm run build",
+        "test": "vitest"
+    },
+    "keywords": [
+        "sveltekit",
+        "websocket",
+        "ws",
+        "real-time"
+    ],
+    "peerDependencies": {
+        "@sveltejs/kit": "^2.48.5",
+        "vite": "^7.2.2 || ^8.0.0"
+    },
+    "dependencies": {
+        "ws": "^8.18.3"
+    },
+    "devDependencies": {
+        "@sveltejs/kit": "^2.48.5",
+        "@types/node": "^24.10.1",
+        "@types/ws": "^8.18.1",
+        "tsup": "^8.5.1",
+        "typescript": "^5.9.3",
+        "vite": "^7.2.2",
+        "vitest": "^4.0.10"
+    },
+    "packageManager": "pnpm@10.22.0+sha512.bf049efe995b28f527fd2b41ae0474ce29186f7edcb3bf545087bd61fbbebb2bf75362d1307fda09c2d288e1e499787ac12d4fcb617a974718a6051f2eee741c"
 }

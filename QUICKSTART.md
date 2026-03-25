@@ -5,7 +5,7 @@ A quick guide to integrating WebSocket into your SvelteKit project.
 ## 1. Install
 
 ```bash
-npm install sveltekit-ws ws
+npm install @yuanlu_yl/sveltekit-ws ws
 ```
 
 ## 2. Setup Development (vite.config.ts)
@@ -13,23 +13,42 @@ npm install sveltekit-ws ws
 ```typescript
 import { sveltekit } from "@sveltejs/kit/vite";
 import { defineConfig } from "vite";
-import { webSocketServer } from "sveltekit-ws/vite";
+import { viteWebSocketServer } from "@yuanlu_yl/sveltekit-ws/server";
 
 export default defineConfig({
   plugins: [
-    webSocketServer({
-      handlers: {
-        onMessage: (connection, message) => {
-          console.log("Got message:", message);
-        },
-      },
-    }),
+    // ⚠️ Must be before sveltekit()
+    viteWebSocketServer({ path: "/ws" }),
     sveltekit(),
   ],
 });
 ```
 
-## 3. Client Side (Svelte Component)
+## 3. Register Handlers (hooks.server.ts)
+
+```typescript
+import type { ServerInit } from "@sveltejs/kit";
+import { channelHandler, getWebSocketManager } from "@yuanlu_yl/sveltekit-ws/server";
+
+export const init: ServerInit = async () => {
+  const manager = getWebSocketManager();
+
+  manager.addHandler("chat", {
+    onMessage(connection, message) {
+      console.log("Got message:", message);
+    },
+  });
+
+  manager.init(channelHandler, (type, obj, msg, ...args) => {
+    if (type === "error") console.error("[WS]", obj, msg, ...args);
+    else if (type === "bad_msg") console.warn("[WS]", obj, msg, ...args);
+  });
+};
+```
+
+## 4. Client Side (Svelte Component)
+
+The client must first send a `channel` message to select a handler.
 
 ```svelte
 <script lang="ts">
@@ -44,16 +63,18 @@ export default defineConfig({
 
     ws = new WebSocket(`ws://${window.location.host}/ws`);
 
+    ws.onopen = () => {
+      // Select the "chat" channel handler
+      ws.send(JSON.stringify({ type: "channel", data: "chat" }));
+    };
+
     ws.onmessage = (event) => {
       messages = [...messages, JSON.parse(event.data)];
     };
   });
 
   function send() {
-    ws.send(JSON.stringify({
-      type: 'chat',
-      data: { text: 'Hello!' }
-    }));
+    ws.send(JSON.stringify({ type: 'chat', data: { text: 'Hello!' } }));
   }
 </script>
 
@@ -64,12 +85,11 @@ export default defineConfig({
 {/each}
 ```
 
-## 4. Broadcast ke Semua Client
+## 5. Broadcast to All Clients
 
 ```typescript
-import { getWebSocketManager } from "sveltekit-ws";
+import { getWebSocketManager } from "@yuanlu_yl/sveltekit-ws/server";
 
-// Handler onMessage
 const manager = getWebSocketManager();
 manager.broadcast({
   type: "notification",
@@ -77,7 +97,7 @@ manager.broadcast({
 });
 ```
 
-## 5. Send ke Client Specific
+## 6. Send to Specific Client
 
 ```typescript
 manager.send("connection-id", {
@@ -92,22 +112,14 @@ For production with `@sveltejs/adapter-node`, create `server.js`:
 
 ```javascript
 import { handler } from "./build/handler.js";
-import express from "express";
 import { createServer } from "http";
-import { createWebSocketHandler } from "sveltekit-ws/server";
+import { createWebSocketHandler } from "@yuanlu_yl/sveltekit-ws/server";
 
-const app = express();
-const server = createServer(app);
+const server = createServer(handler);
 
-createWebSocketHandler(server, {
-  handlers: {
-    onMessage: (connection, message) => {
-      // Handle message
-    },
-  },
-});
+// Transport only — handlers are registered in hooks.server.ts
+createWebSocketHandler(server, { path: "/ws" });
 
-app.use(handler);
 server.listen(3000);
 ```
 
@@ -123,4 +135,4 @@ Update `package.json`:
 
 That's it! 🎉
 
-For more examples, check the `/examples` folder.
+For more details, check the [README](README.md) or the `/examples` folder.

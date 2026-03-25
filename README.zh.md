@@ -1,33 +1,33 @@
 # SvelteKit WebSocket
 
-> This package is a fork of [sveltekit-ws](https://github.com/ketarketir/sveltekit-ws) by [ketarketir](https://github.com/ketarketir), licensed under MIT.
+> 本包 fork 自 [ketarketir](https://github.com/ketarketir) 的 [sveltekit-ws](https://github.com/ketarketir/sveltekit-ws)，基于 MIT 协议。
 
-WebSocket integration for SvelteKit without external server - seamlessly works in both development and production.
+无需外部服务器的 SvelteKit WebSocket 集成方案，在开发和生产环境中均可无缝运行。
 
-## Features
+## 特性
 
-- 🚀 **Zero Configuration** - Works out of the box with SvelteKit
-- 🔄 **Auto Reconnection** - Built-in reconnection logic with configurable attempts
-- 💪 **Type Safe** - Full TypeScript support with proper types
-- 🔌 **No External Server** - Integrated directly into Vite dev server and production
-- 🎯 **Channel Routing** - Multiple named handlers via `channelHandler`
-- 💗 **Heartbeat Support** - Automatic ping/pong to keep connections alive
-- 🛡️ **Client Verification** - Custom authentication/authorization hooks
-- 📦 **Small Bundle** - Minimal dependencies
+- 🚀 **零配置** - 开箱即用，与 SvelteKit 完美集成
+- 🔄 **自动重连** - 内置重连逻辑，可配置重试次数
+- 💪 **类型安全** - 完整的 TypeScript 支持
+- 🔌 **无需外部服务器** - 直接集成到 Vite 开发服务器和生产环境
+- 🎯 **频道路由** - 通过 `channelHandler` 支持多个命名处理器
+- 💗 **心跳支持** - 自动 ping/pong 保持连接活跃
+- 🛡️ **客户端验证** - 自定义认证/鉴权钩子
+- 📦 **体积小巧** - 极少的外部依赖
 
-## Installation
+## 安装
 
 ```bash
 npm install @yuanlu_yl/sveltekit-ws
-# or
+# 或
 pnpm add @yuanlu_yl/sveltekit-ws
 ```
 
-## Usage
+## 使用方法
 
-### 1. Vite Plugin (vite.config.ts)
+### 1. Vite 插件（vite.config.ts）
 
-Register the WebSocket transport. No handlers here — just path and options.
+注册 WebSocket 传输层，此处只配置路径和选项，不注册处理器。
 
 ```typescript
 import { sveltekit } from "@sveltejs/kit/vite";
@@ -36,16 +36,16 @@ import { viteWebSocketServer } from "@yuanlu_yl/sveltekit-ws/server";
 
 export default defineConfig({
   plugins: [
-    // ⚠️ WebSocket plugin MUST be before sveltekit()
+    // ⚠️ WebSocket 插件必须在 sveltekit() 之前
     viteWebSocketServer({ path: "/ws" }),
     sveltekit(),
   ],
 });
 ```
 
-### 2. Server Initialization (hooks.server.ts)
+### 2. 服务端初始化（hooks.server.ts）
 
-Register handlers and initialize the manager in SvelteKit's `init` hook.
+在 SvelteKit 的 `init` 钩子中注册处理器并初始化管理器。
 
 ```typescript
 import type { ServerInit } from "@sveltejs/kit";
@@ -54,25 +54,25 @@ import { channelHandler, getWebSocketManager } from "@yuanlu_yl/sveltekit-ws/ser
 export const init: ServerInit = async () => {
   const manager = getWebSocketManager();
 
-  // Register a named channel handler
+  // 注册命名频道处理器
   manager.addHandler("chat", {
     onConnect(connection) {
       manager.send(connection.id, {
         type: "welcome",
-        data: { message: "Connected!" },
+        data: { message: "已连接！" },
       });
     },
     onMessage(connection, message) {
-      // Broadcast to all except sender
+      // 广播给除发送者外的所有人
       manager.broadcast({ type: "chat", data: message.data }, [connection.id]);
     },
     onDisconnect(connection) {
-      console.log("Disconnected:", connection.id);
+      console.log("已断开:", connection.id);
     },
   });
 
-  // channelHandler routes connections to named handlers
-  // The client must first send { type: "channel", data: "chat" } to select a handler
+  // channelHandler 将连接路由到对应的命名处理器
+  // 客户端必须先发送 { type: "channel", data: "chat" } 来选择处理器
   manager.init(channelHandler, (type, obj, msg, ...args) => {
     if (type === "error") console.error("[WS]", obj, msg, ...args);
     else if (type === "bad_msg") console.warn("[WS]", obj, msg, ...args);
@@ -80,9 +80,9 @@ export const init: ServerInit = async () => {
 };
 ```
 
-### 3. Production Setup (server.js)
+### 3. 生产环境配置（server.js）
 
-For production with `@sveltejs/adapter-node`:
+使用 `@sveltejs/adapter-node` 的生产环境配置：
 
 ```javascript
 import { handler } from "./build/handler.js";
@@ -91,16 +91,16 @@ import { createWebSocketHandler } from "@yuanlu_yl/sveltekit-ws/server";
 
 const server = createServer(handler);
 
-// Setup WebSocket transport (handlers are registered in hooks.server.ts)
+// 配置 WebSocket 传输层（处理器已在 hooks.server.ts 中注册）
 createWebSocketHandler(server, { path: "/ws" });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT);
 ```
 
-### 4. Client Side
+### 4. 客户端
 
-The client must first send a `channel` message to select a handler, then communicate normally.
+客户端必须先发送 `channel` 消息选择处理器，之后才能正常通信。
 
 ```svelte
 <script lang="ts">
@@ -118,7 +118,7 @@ The client must first send a `channel` message to select a handler, then communi
 
     ws.onopen = () => {
       connected = true;
-      // Select the "chat" channel handler
+      // 选择 "chat" 频道处理器
       ws!.send(JSON.stringify({ type: "channel", data: "chat" }));
     };
 
@@ -138,18 +138,18 @@ The client must first send a `channel` message to select a handler, then communi
 </script>
 ```
 
-## Channel Routing
+## 频道路由
 
-`channelHandler` enables multiple named handlers on a single WebSocket endpoint. The client selects a handler by sending a channel message as its first message:
+`channelHandler` 允许在单个 WebSocket 端点上挂载多个命名处理器。客户端通过发送第一条消息来选择处理器：
 
 ```json
 { "type": "channel", "data": "handler-name" }
 ```
 
-After that, all messages are routed to the selected handler's `onMessage`. If the channel name is unknown or the first message is not a channel selection, the connection is dropped.
+之后所有消息都会路由到所选处理器的 `onMessage`。若频道名称未知，或第一条消息不是频道选择消息，连接将被断开。
 
 ```typescript
-// Register multiple handlers
+// 注册多个处理器
 manager.addHandler("chat", chatHandlers);
 manager.addHandler("notifications", notificationHandlers);
 manager.addHandler("game", gameHandlers);
@@ -157,45 +157,45 @@ manager.addHandler("game", gameHandlers);
 manager.init(channelHandler, logger);
 ```
 
-## Connection Management
+## 连接管理
 
 ```typescript
 import { getWebSocketManager } from "@yuanlu_yl/sveltekit-ws/server";
 
 const manager = getWebSocketManager();
 
-// Send to specific client
-manager.send("connection-id", { type: "private", data: { message: "Only for you" } });
+// 发送给指定客户端
+manager.send("connection-id", { type: "private", data: { message: "仅对你可见" } });
 
-// Broadcast to all
-manager.broadcast({ type: "announcement", data: { message: "Hello everyone!" } });
+// 广播给所有人
+manager.broadcast({ type: "announcement", data: { message: "大家好！" } });
 
-// Broadcast excluding some connections
+// 广播时排除部分连接
 manager.broadcast({ type: "message", data: "Hello!" }, ["id-1", "id-2"]);
 
-// Get all connections
+// 获取所有连接
 const connections = manager.getConnections();
 
-// Disconnect a client
+// 断开某个客户端
 manager.disconnect("connection-id");
 
-// Get connection count
+// 获取连接数
 const count = manager.size();
 ```
 
-## Configuration Options
+## 配置项
 
 ```typescript
 interface WSServerOptions {
-  path?: string;              // Default: '/ws'
-  maxPayload?: number;        // Default: 1MB
-  heartbeat?: boolean;        // Default: true
-  heartbeatInterval?: number; // Default: 30000ms
+  path?: string;              // 默认: '/ws'
+  maxPayload?: number;        // 默认: 1MB
+  heartbeat?: boolean;        // 默认: true
+  heartbeatInterval?: number; // 默认: 30000ms
   verifyClient?: (info: { origin: string; secure: boolean; req: any }) => boolean | Promise<boolean>;
 }
 ```
 
-## Custom Client Verification
+## 自定义客户端验证
 
 ```typescript
 viteWebSocketServer({
@@ -212,7 +212,7 @@ viteWebSocketServer({
 });
 ```
 
-## Message Types
+## 消息类型
 
 ```typescript
 interface WSMessage<T = any> {
@@ -225,19 +225,19 @@ interface WSConnection {
   ws: WebSocket;
   id: string;
   metadata?: Record<string, any>;
-  handler?: WSHandlers; // set by channelHandler after channel selection
+  handler?: WSHandlers; // 由 channelHandler 在频道选择后设置
 }
 ```
 
-## Examples
+## 示例
 
-Check the `/examples` directory for a complete chat application using channel routing.
+查看 `/examples` 目录，其中包含一个使用频道路由的完整聊天应用示例。
 
-## Deployment
+## 部署
 
 ### Vercel / Cloudflare / Netlify
 
-WebSocket is not supported in serverless platforms. Use `adapter-node` with a VPS or dedicated server.
+Serverless 平台不支持 WebSocket，请使用 `adapter-node` 配合 VPS 或独立服务器部署。
 
 ### Docker
 
@@ -252,7 +252,7 @@ EXPOSE 3000
 CMD ["node", "server.js"]
 ```
 
-### Nginx Configuration
+### Nginx 配置
 
 ```nginx
 location /ws {
@@ -264,23 +264,23 @@ location /ws {
 }
 ```
 
-## Troubleshooting
+## 常见问题
 
-### WebSocket not connecting in production
+### 生产环境 WebSocket 无法连接
 
-1. Ensure `createWebSocketHandler` is called before `server.listen()`
-2. Expose the correct port
-3. Allow WebSocket connections through the firewall
-4. Configure reverse proxy (nginx) to support WebSocket upgrade
+1. 确保 `createWebSocketHandler` 在 `server.listen()` 之前调用
+2. 确认端口已正确暴露
+3. 防火墙允许 WebSocket 连接
+4. 反向代理（nginx）已配置 WebSocket upgrade 支持
 
-## Contributing
+## 贡献
 
-Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md).
+欢迎贡献代码！请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-## License
+## 许可证
 
 MIT © 2024
 
-## Credits
+## 致谢
 
-Inspired by [ubermanu/sveltekit-websocket](https://github.com/ubermanu/sveltekit-websocket)
+灵感来源于 [ubermanu/sveltekit-websocket](https://github.com/ubermanu/sveltekit-websocket)

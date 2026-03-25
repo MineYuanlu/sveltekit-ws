@@ -1,150 +1,53 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+本项目 fork 自 [ketarketir/sveltekit-ws](https://github.com/ketarketir/sveltekit-ws)，基于 MIT 协议。
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [1.3.0] - 2026-03-25
 
-## [1.0.0] - 2024-11-18
+本版本为 fork 后的首个独立发布版本（包名 `@yuanlu_yl/sveltekit-ws`），包含架构重构、新特性及文档完善。
 
-### Added
+### 核心变更：处理器注册模式
 
-- Initial release of sveltekit-ws
-- Vite plugin for development WebSocket integration
-- Custom server handler for production with adapter-node
-- Connection manager with broadcast and targeted send capabilities
-- Heartbeat/ping-pong support for connection health monitoring
-- Auto-reconnection logic with configurable retry attempts
-- TypeScript support with full type definitions
-- Client verification/authentication hooks
-- Metadata support for connections
-- Graceful shutdown handling
-- Comprehensive examples:
-  - Basic WebSocket demo
-  - Advanced chat room with rooms
-  - Reusable Svelte store
-  - Production server setup
-  - Authentication example
-  - Typing indicators
-- Full documentation:
-  - README with detailed API reference
-  - Quick Start guide
-  - Step-by-step tutorial
-  - Example implementations
+**原版本的问题**：业务逻辑必须在 `vite.config.ts`（开发环境）和生产服务器入口（生产环境）中各定义一次，既不合理，也造成代码重复。
 
-### Features
+**新版本**：将传输层与业务逻辑彻底分离。`vite.config.ts` 只负责注册 WebSocket 路径和传输配置，业务处理器通过 `manager.addHandler()` 注册，可在 `src/` 目录下任意位置定义，随 SvelteKit/Vite 构建流程正确打包，开发和生产环境共用同一套代码。
 
-- ✅ Zero external server required
-- ✅ Works seamlessly in development and production
-- ✅ Full TypeScript support
-- ✅ Room-based messaging support
-- ✅ Connection pooling and management
-- ✅ Broadcast to all or specific clients
-- ✅ Automatic heartbeat with configurable intervals
-- ✅ Custom client verification
-- ✅ Message type safety
-- ✅ Production-ready with graceful shutdown
+```typescript
+// vite.config.ts —— 只配置传输层，不写业务逻辑
+viteWebSocketServer({ path: "/ws" })
 
-### Documentation
+// src/lib/ws/chat.ts —— 业务逻辑可放在 src 任意位置
+manager.addHandler("chat", { onMessage(...) { ... } })
+```
 
-- Complete API reference
-- Multiple working examples
-- Production deployment guide
-- Nginx configuration examples
-- Troubleshooting guide
+### 新特性
 
-## [Unreleased]
+- **处理器注册 API**：`manager.addHandler(name, handler)` 支持在 `src/` 内任意模块注册命名处理器，无需集中配置
+- **频道路由（Channel Handler）**：新增内置 `channelHandler`，客户端发送 `{ type: "channel", data: "<name>" }` 即可路由到对应处理器
+- **反射式消息分发**：连接绑定处理器后，后续消息自动转发，无需手动路由
+- **日志回调**：`manager.init()` 支持传入日志回调，可自定义 `error`、`warn`、`bad_msg` 等事件的处理方式
 
-### Planned Features
+### 重构
 
-- [ ] Built-in room management system
-- [ ] Message persistence option
-- [ ] Rate limiting per connection
-- [ ] Binary message support
-- [ ] Compression support
-- [ ] Redis adapter for horizontal scaling
-- [ ] Built-in authentication middleware
-- [ ] Metrics and monitoring
-- [ ] Admin dashboard
-- [ ] Message encryption
-- [ ] File transfer support
+- **模块结构重构**：将核心逻辑从 `server.ts` / `vite.ts` 拆分为独立的 `core.ts`，职责更清晰
+- **类型系统完善**：扩展 `WSConnection`、`WSHandlers`、`WSMessage` 等核心类型，增加连接级别的处理器绑定支持
+- **构建配置优化**：调整 `tsup.config.ts`，精简输出产物
+- **代码风格统一**：新增 `.prettierrc` 配置，统一格式化规范
 
-### Known Issues
+### 改进
 
-- WebSocket not supported on serverless platforms (Vercel, Netlify, etc.)
-- Requires adapter-node for production
-- Single server limitation (no built-in clustering yet)
+- 升级 Vite 依赖版本，兼容最新 SvelteKit 构建环境
+- 修正 `hooks.server.ts` 示例，使用 SvelteKit `init` 钩子进行初始化
 
-## Migration Guides
+### 文档
 
-### From ubermanu/sveltekit-websocket
+- 新增 `README.zh.md` 中文文档，包含完整的安装、配置、API 说明及使用示例
+- 重写 `README.md`，精简英文文档结构
+- 更新 `QUICKSTART.md` 快速上手指南
+- 更新 `examples/` 示例代码，展示 `channelHandler` 的完整用法
 
-If you're migrating from the older `ubermanu/sveltekit-websocket`:
+---
 
-1. **Update dependencies:**
+## [1.0.2] 及之前
 
-   ```bash
-   npm uninstall vite-plugin-websocket
-   npm install sveltekit-ws ws
-   ```
-
-2. **Update vite.config.ts:**
-
-   ```typescript
-   // Old
-   import websocket from "vite-plugin-websocket";
-
-   // New
-   import { webSocketServer } from "sveltekit-ws/vite";
-   ```
-
-3. **Update handler structure:**
-
-   ```typescript
-   // Old
-   websocket({
-     "/ws": {
-       handler: (data) => {
-         /* ... */
-       },
-     },
-   });
-
-   // New
-   webSocketServer({
-     path: "/ws",
-     handlers: {
-       onMessage: (connection, message) => {
-         /* ... */
-       },
-     },
-   });
-   ```
-
-4. **Update message format:**
-
-   - Old: Custom format
-   - New: `{ type: string, data: any, timestamp?: number }`
-
-5. **Update broadcast logic:**
-
-   ```typescript
-   // Old
-   import { broadcast } from "vite-plugin-websocket";
-   broadcast("/ws", data);
-
-   // New
-   import { getWebSocketManager } from "sveltekit-ws";
-   const manager = getWebSocketManager();
-   manager.broadcast({ type: "message", data });
-   ```
-
-## Support
-
-- GitHub Issues: [Report bugs or request features]
-- Documentation: See README.md and TUTORIAL.md
-- Examples: Check /examples directory
-
-## License
-
-MIT License - See LICENSE file for details
+上游版本，详见 [ketarketir/sveltekit-ws releases](https://github.com/ketarketir/sveltekit-ws)。

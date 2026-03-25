@@ -2,6 +2,13 @@
 
 本项目 fork 自 [ketarketir/sveltekit-ws](https://github.com/ketarketir/sveltekit-ws)，基于 MIT 协议。
 
+## [1.3.3] - 2026-03-25
+
+### 改进
+
+- **增强心跳机制**：WebSocket 服务端现在会记录连接的最后活跃时间，若在心跳间隔的 1.5 倍时间内未收到 `pong` 响应，则主动终止连接，避免僵死连接残留。
+- 启用 WebSocket 服务器的 `autoPong` 选项，确保自动响应 `ping` 帧。
+
 ## [1.3.2] - 2026-03-25
 
 ### 重构

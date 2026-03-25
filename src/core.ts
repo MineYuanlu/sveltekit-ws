@@ -35,6 +35,7 @@ function create(options: WSServerOptions = {}) {
         const wss = new WebSocketServer({
             noServer: true,
             maxPayload,
+            autoPong: true,
             verifyClient: verifyClient
                 ? (info, callback) => {
                       Promise.resolve(verifyClient(info))
@@ -93,15 +94,26 @@ function create(options: WSServerOptions = {}) {
                 return;
             }
 
+            let lastActive = Date.now();
             // 设置心跳
             if (heartbeat) {
                 const timer = setInterval(() => {
+                    if (!lastActive || Date.now() - lastActive > heartbeatInterval * 1.5) {
+                        try {
+                            ws.terminate();
+                        } catch (_) {}
+                        return;
+                    }
                     if (ws.readyState === WebSocket.OPEN) {
                         ws.ping();
                     }
                 }, heartbeatInterval);
                 heartbeatTimers.set(connection.id, timer);
             }
+
+            ws.on('pong', () => {
+                lastActive = Date.now();
+            });
 
             // 处理消息
             ws.on('message', async (rawData) => {

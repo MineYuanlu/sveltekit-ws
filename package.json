@@ -1,6 +1,6 @@
 {
     "name": "@yuanlu_yl/sveltekit-ws",
-    "version": "1.3.2",
+    "version": "1.3.3",
     "description": "WebSocket integration for SvelteKit without external server",
     "type": "module",
     "repository": {

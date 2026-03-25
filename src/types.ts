@@ -1,13 +1,23 @@
+import type { IncomingHttpHeaders } from 'node:http';
 import type { WebSocket } from 'ws';
+
+export interface WSConnectionMetadata {
+    url?: string;
+    headers: IncomingHttpHeaders;
+    remoteAddress?: string;
+}
 
 /**
  * WebSocket 连接及其元数据
  */
-export interface WSConnection {
+export interface WSConnection<Locals extends Record<string, any> = Record<string, any>> {
     ws: WebSocket;
     id: string;
-    metadata?: Record<string, any>;
-    /** 事件处理器: 在多处理器模式下, 用于指定此连接被哪个 */
+    /** 连接的元数据 */
+    readonly metadata: WSConnectionMetadata;
+    /** 连接的本地数据 */
+    readonly locals: Partial<Locals>;
+    /** 事件处理器: 在多处理器模式下, 用于指定此连接实际使用的事件处理器 */
     handler?: WSHandlers;
 
     /**
@@ -48,11 +58,11 @@ export type WSLogFunction = <T, TMsg extends string = string>(
 /**
  * WebSocket 事件处理器
  */
-export interface WSHandlers {
-    onConnect?: (connection: WSConnection) => void | Promise<void>;
-    onDisconnect?: (connection: WSConnection) => void | Promise<void>;
-    onMessage?: (connection: WSConnection, message: WSMessage) => void | Promise<void>;
-    onError?: (connection: WSConnection, error: unknown) => void | Promise<void>;
+export interface WSHandlers<Locals extends Record<string, any> = Record<string, any>> {
+    onConnect?: (connection: WSConnection<Locals>) => void | Promise<void>;
+    onDisconnect?: (connection: WSConnection<Locals>) => void | Promise<void>;
+    onMessage?: (connection: WSConnection<Locals>, message: WSMessage) => void | Promise<void>;
+    onError?: (connection: WSConnection<Locals>, error: unknown) => void | Promise<void>;
 }
 
 /**

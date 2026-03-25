@@ -1,14 +1,24 @@
 import type { WebSocket } from 'ws';
-import type { WSConnection, WSMessage, WSManager, WSHandlers, WSLogFunction } from './types.js';
+import type {
+    WSConnection,
+    WSMessage,
+    WSManager,
+    WSHandlers,
+    WSLogFunction,
+    WSConnectionMetadata,
+} from './types.js';
 
 const IdPrefix = Math.random().toString(36).substring(2);
 let IdIndex = 0;
 
-class WebSocketConnection implements WSConnection {
+class WebSocketConnection<
+    Locals extends Record<string, any> = Record<string, any>,
+> implements WSConnection<Locals> {
+    public readonly locals: Partial<Locals> = {};
     constructor(
         public ws: WebSocket,
         public id: string,
-        public metadata?: Record<string, any>,
+        public readonly metadata: WSConnectionMetadata,
     ) {}
 
     /**
@@ -63,16 +73,19 @@ class WebSocketConnection implements WSConnection {
 export class WebSocketManager implements WSManager {
     private connections: Map<string, WSConnection> = new Map();
 
-    private handlers: Map<string, WSHandlers> = new Map();
+    private handlers: Map<string, WSHandlers<any>> = new Map();
 
     private logger: WSLogFunction | undefined;
 
-    private mainHandler: WSHandlers | undefined;
+    private mainHandler: WSHandlers<any> | undefined;
 
     /**
      * 初始化 WebSocket 管理器
      */
-    init(handler: WSHandlers, logger: WSLogFunction | undefined) {
+    init<Locals extends Record<string, any> = Record<string, any>>(
+        handler: WSHandlers<Locals>,
+        logger: WSLogFunction | undefined,
+    ) {
         this.mainHandler = handler;
         this.logger = logger;
     }
@@ -80,7 +93,7 @@ export class WebSocketManager implements WSManager {
     /**
      * 添加新连接
      */
-    addConnection(ws: WebSocket, metadata?: Record<string, any>): WSConnection {
+    addConnection(ws: WebSocket, metadata: WSConnectionMetadata): WSConnection {
         const id = `${IdPrefix}-${++IdIndex}`;
         const connection = new WebSocketConnection(ws, id, metadata);
         this.connections.set(id, connection);
@@ -108,7 +121,10 @@ export class WebSocketManager implements WSManager {
     /**
      * 添加事件处理器
      */
-    addHandler(id: string, handler: WSHandlers): void {
+    addHandler<Locals extends Record<string, any> = Record<string, any>>(
+        id: string,
+        handler: WSHandlers<Locals>,
+    ): void {
         this.handlers.set(id, handler);
     }
 

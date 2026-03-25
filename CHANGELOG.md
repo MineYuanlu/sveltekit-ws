@@ -2,6 +2,19 @@
 
 本项目 fork 自 [ketarketir/sveltekit-ws](https://github.com/ketarketir/sveltekit-ws)，基于 MIT 协议。
 
+## [1.3.4] - 2026-03-26
+
+### 新特性
+
+- **连接元数据增强**：新增 `WSConnectionMetadata` 类型，提供更规范的连接信息，包含请求 URL (`url`)、请求头 (`headers`) 和客户端地址 (`remoteAddress`)。`WSConnection` 的 `metadata` 属性现改为只读，确保元数据在连接生命周期内不可变。
+- **连接本地数据支持**：`WSConnection` 新增 `locals` 属性，允许在连接实例上存储请求作用域内的自定义数据，便于在处理链路中传递上下文信息。
+
+### 类型系统完善
+
+- **泛型支持**：`WSConnection` 和 `WSHandlers` 接口增加泛型参数 `Locals`，支持类型安全的连接本地数据定义。
+- **类型约束优化**：`WebSocketManager` 的 `addHandler` 和 `init` 方法支持泛型参数，使处理器与对应连接类型的 `locals` 能够正确关联。
+
+
 ## [1.3.3] - 2026-03-25
 
 ### 改进

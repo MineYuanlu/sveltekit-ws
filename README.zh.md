@@ -10,7 +10,7 @@
 - 🔄 **自动重连** - 内置重连逻辑，可配置重试次数
 - 💪 **类型安全** - 完整的 TypeScript 支持
 - 🔌 **无需外部服务器** - 直接集成到 Vite 开发服务器和生产环境
-- 🎯 **频道路由** - 通过 `channelHandler` 支持多个命名处理器
+- 🎯 **消息类型路由** - 多处理器按消息类型并行触发
 - 💗 **心跳支持** - 自动 ping/pong 保持连接活跃
 - 🛡️ **客户端验证** - 自定义认证/鉴权钩子
 - 📦 **体积小巧** - 极少的外部依赖
@@ -45,17 +45,17 @@ export default defineConfig({
 
 ### 2. 服务端初始化（hooks.server.ts）
 
-在 SvelteKit 的 `init` 钩子中注册处理器并初始化管理器。
+在 SvelteKit 的 `init` 钩子中注册处理器并初始化管理器。每个处理器声明自己处理的消息类型。
 
 ```typescript
 import type { ServerInit } from "@sveltejs/kit";
-import { channelHandler, getWebSocketManager } from "@yuanlu_yl/sveltekit-ws/server";
+import { getWebSocketManager } from "@yuanlu_yl/sveltekit-ws/server";
 
 export const init: ServerInit = async () => {
   const manager = getWebSocketManager();
 
-  // 注册命名频道处理器
-  manager.addHandler("chat", {
+  // 注册处理器，声明它处理的消息类型
+  manager.addHandler(["chat/send", "chat/join"], {
     onConnect(connection) {
       manager.send(connection.id, {
         type: "welcome",
@@ -63,7 +63,7 @@ export const init: ServerInit = async () => {
       });
     },
     onMessage(connection, message) {
-      // 广播给除发送者外的所有人
+      // 只会收到 type 为 "chat/send" 或 "chat/join" 的消息
       manager.broadcast({ type: "chat", data: message.data }, [connection.id]);
     },
     onDisconnect(connection) {
@@ -71,9 +71,7 @@ export const init: ServerInit = async () => {
     },
   });
 
-  // channelHandler 将连接路由到对应的命名处理器
-  // 客户端必须先发送 { type: "channel", data: "chat" } 来选择处理器
-  manager.init(channelHandler, (type, obj, msg, ...args) => {
+  manager.init((type, obj, msg, ...args) => {
     if (type === "error") console.error("[WS]", obj, msg, ...args);
     else if (type === "bad_msg") console.warn("[WS]", obj, msg, ...args);
   });
@@ -100,7 +98,7 @@ server.listen(PORT);
 
 ### 4. 客户端
 
-客户端必须先发送 `channel` 消息选择处理器，之后才能正常通信。
+连接后直接发送消息即可，无需频道选择步骤。
 
 ```svelte
 <script lang="ts">
@@ -118,8 +116,7 @@ server.listen(PORT);
 
     ws.onopen = () => {
       connected = true;
-      // 选择 "chat" 频道处理器
-      ws!.send(JSON.stringify({ type: "channel", data: "chat" }));
+      // 直接发送业务消息，服务端按消息类型自动路由
     };
 
     ws.onmessage = (event) => {
@@ -133,28 +130,22 @@ server.listen(PORT);
   onDestroy(() => ws?.close());
 
   function sendMessage(text: string) {
-    ws?.send(JSON.stringify({ type: "chat", data: { text } }));
+    ws?.send(JSON.stringify({ type: "chat/send", data: { text } }));
   }
 </script>
 ```
 
-## 频道路由
+## 消息类型路由
 
-`channelHandler` 允许在单个 WebSocket 端点上挂载多个命名处理器。客户端通过发送第一条消息来选择处理器：
-
-```json
-{ "type": "channel", "data": "handler-name" }
-```
-
-之后所有消息都会路由到所选处理器的 `onMessage`。若频道名称未知，或第一条消息不是频道选择消息，连接将被断开。
+处理器在注册时声明自己处理的消息类型。当消息到达时，框架将其分发给所有注册了该消息类型的处理器。多个处理器可以处理同一消息类型，单个处理器也可以处理多种类型。
 
 ```typescript
-// 注册多个处理器
-manager.addHandler("chat", chatHandlers);
-manager.addHandler("notifications", notificationHandlers);
-manager.addHandler("game", gameHandlers);
+// 注册多个处理器，各自声明处理的消息类型
+manager.addHandler(["chat/send", "chat/join"], chatHandlers);
+manager.addHandler(["notification/push"], notificationHandlers);
+manager.addHandler(["game/move", "game/join"], gameHandlers);
 
-manager.init(channelHandler, logger);
+manager.init(logger);
 ```
 
 ## 连接管理
@@ -215,23 +206,25 @@ viteWebSocketServer({
 ## 消息类型
 
 ```typescript
-interface WSMessage<T = any> {
-  type: string;
-  data: T;
+interface WSMessage<Data = any, Type extends string = string> {
+  type: Type;
+  data: Data;
   timestamp?: number;
 }
 
 interface WSConnection {
   ws: WebSocket;
   id: string;
-  metadata?: Record<string, any>;
-  handler?: WSHandlers; // 由 channelHandler 在频道选择后设置
+  readonly metadata: WSConnectionMetadata;
+  readonly locals: Partial<WSConnectionLocals>;
+  readonly handlers: ReadonlyArray<WSHandlers>;
+  readonly msgHandler: ReadonlyMap<string, WSHandlers[]>;
 }
 ```
 
 ## 示例
 
-查看 `/examples` 目录，其中包含一个使用频道路由的完整聊天应用示例。
+查看 `/examples` 目录，其中包含一个完整的聊天应用示例。
 
 ## 部署
 

@@ -6,20 +6,31 @@ import type {
     WSHandlers,
     WSLogFunction,
     WSConnectionMetadata,
+    WSConnectionLocals,
 } from './types.js';
+import { initInternalHandler } from './handler.js';
 
 const IdPrefix = Math.random().toString(36).substring(2);
 let IdIndex = 0;
 
-class WebSocketConnection<
-    Locals extends Record<string, any> = Record<string, any>,
-> implements WSConnection<Locals> {
-    public readonly locals: Partial<Locals> = {};
+class WebSocketConnection implements WSConnection {
+    public readonly locals: Partial<WSConnectionLocals> = {};
+    public readonly handlers: ReadonlyArray<WSHandlers<string>>;
+    public readonly msgHandler: ReadonlyMap<string, WSHandlers[]>;
     constructor(
         public ws: WebSocket,
         public id: string,
         public readonly metadata: WSConnectionMetadata,
-    ) {}
+        handlers: ReadonlyArray<WSHandlers<string>>,
+        msgHandler: ReadonlyMap<string, WSHandlers[]>,
+    ) {
+        this.handlers = [...handlers];
+        const handlerMap = new Map();
+        for (const [type, handlers] of msgHandler) {
+            handlerMap.set(type, [...handlers]);
+        }
+        this.msgHandler = handlerMap;
+    }
 
     /**
      * 发送消息
@@ -73,20 +84,17 @@ class WebSocketConnection<
 export class WebSocketManager implements WSManager {
     private connections: Map<string, WSConnection> = new Map();
 
-    private handlers: Map<string, WSHandlers<any>> = new Map();
-
+    private readonly handlers: WSHandlers<any>[] = [];
+    private readonly msgHandler: Map<string, WSHandlers<any>[]> = new Map();
     private logger: WSLogFunction | undefined;
 
-    private mainHandler: WSHandlers<any> | undefined;
-
+    constructor() {
+        initInternalHandler(this);
+    }
     /**
      * 初始化 WebSocket 管理器
      */
-    init<Locals extends Record<string, any> = Record<string, any>>(
-        handler: WSHandlers<Locals>,
-        logger: WSLogFunction | undefined,
-    ) {
-        this.mainHandler = handler;
+    init(logger: WSLogFunction | undefined) {
         this.logger = logger;
     }
 
@@ -95,7 +103,13 @@ export class WebSocketManager implements WSManager {
      */
     addConnection(ws: WebSocket, metadata: WSConnectionMetadata): WSConnection {
         const id = `${IdPrefix}-${++IdIndex}`;
-        const connection = new WebSocketConnection(ws, id, metadata);
+        const connection = new WebSocketConnection(
+            ws,
+            id,
+            metadata,
+            this.handlers,
+            this.msgHandler,
+        );
         this.connections.set(id, connection);
         return connection;
     }
@@ -114,25 +128,26 @@ export class WebSocketManager implements WSManager {
         return this.connections.get(id);
     }
 
-    getMainHandler(): WSHandlers | undefined {
-        return this.mainHandler;
-    }
-
     /**
      * 添加事件处理器
      */
-    addHandler<Locals extends Record<string, any> = Record<string, any>>(
-        id: string,
-        handler: WSHandlers<Locals>,
+    addHandler<MessageTypes extends string = string>(
+        types: MessageTypes[],
+        handler: WSHandlers<MessageTypes>,
     ): void {
-        this.handlers.set(id, handler);
+        types.forEach((type) => {
+            let arr = this.msgHandler.get(type);
+            if (!arr) this.msgHandler.set(type, (arr = []));
+            arr.push(handler);
+        });
+        this.handlers.push(handler);
     }
 
     /**
      * 获取事件处理器
      */
-    getHandler(id: string): WSHandlers | undefined {
-        return this.handlers.get(id);
+    getHandlers(type: string): WSHandlers[] | undefined {
+        return this.msgHandler.get(type);
     }
 
     /**

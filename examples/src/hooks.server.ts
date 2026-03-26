@@ -1,11 +1,12 @@
 import type { Handle, ServerInit } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
-import { channelHandler, getWebSocketManager } from '@yuanlu_yl/sveltekit-ws/server';
+import { getWebSocketManager } from '@yuanlu_yl/sveltekit-ws/server';
 
 export const init: ServerInit = async () => {
     const manager = getWebSocketManager();
 
-    manager.addHandler('chat', {
+    // 注册聊天处理器，声明它处理的消息类型
+    manager.addHandler(['identify', 'chat'], {
         onConnect(connection) {
             console.log(`[WS] chat: connection ${connection.id} established`);
             manager.send(connection.id, {
@@ -18,11 +19,8 @@ export const init: ServerInit = async () => {
 
             switch (message.type) {
                 case 'identify':
-                    connection.metadata = {
-                        ...connection.metadata,
-                        userId: message.data.userId,
-                        username: message.data.username,
-                    };
+                    connection.locals.userId = message.data.userId;
+                    connection.locals.username = message.data.username;
                     manager.send(connection.id, {
                         type: 'identified',
                         data: { connectionId: connection.id, userId: message.data.userId },
@@ -34,8 +32,8 @@ export const init: ServerInit = async () => {
                         {
                             type: 'chat',
                             data: {
-                                userId: connection.metadata?.userId,
-                                username: connection.metadata?.username,
+                                userId: connection.locals.userId,
+                                username: connection.locals.username,
                                 text: message.data.text,
                             },
                         },
@@ -49,7 +47,7 @@ export const init: ServerInit = async () => {
         },
     });
 
-    manager.init(channelHandler, (type, obj, msg, ...args) => {
+    manager.init((type, obj, msg, ...args) => {
         if (type === 'error') console.error('[WS]', obj, msg, ...args);
         else if (type === 'bad_msg') console.warn('[WS]', obj, msg, ...args);
     });

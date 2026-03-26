@@ -4,6 +4,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import type { WSMessage, WSServerOptions } from './types.js';
 import { getWebSocketManagerImpl } from './manager.js';
 import type { Plugin, ViteDevServer } from 'vite';
+import { TYPE_QUERY_HANDLER, TYPE_QUERY_HANDLER_RESPONSE } from './consts.js';
 
 export function isWSMessage(message: unknown): message is WSMessage {
     if (!message || typeof message !== 'object') return false;
@@ -52,11 +53,6 @@ function create(options: WSServerOptions = {}) {
 
             if (url.pathname !== path) return;
 
-            if (!manager.getMainHandler()) {
-                socket.destroy();
-                return;
-            }
-
             wss.handleUpgrade(request, socket, head, (ws) => {
                 wss.emit('connection', ws, request);
             });
@@ -71,7 +67,7 @@ function create(options: WSServerOptions = {}) {
             });
 
             try {
-                await manager.getMainHandler()?.onConnect?.(connection);
+                await Promise.all(connection.handlers.map((h) => h.onConnect?.(connection)));
             } catch (err) {
                 try {
                     manager.log(
@@ -94,8 +90,8 @@ function create(options: WSServerOptions = {}) {
                 return;
             }
 
-            let lastActive = Date.now();
             // 设置心跳
+            let lastActive = Date.now();
             if (heartbeat) {
                 const timer = setInterval(() => {
                     if (!lastActive || Date.now() - lastActive > heartbeatInterval * 1.5) {
@@ -121,20 +117,19 @@ function create(options: WSServerOptions = {}) {
                 try {
                     message = JSON.parse(rawData.toString());
                     if (!isWSMessage(message)) throw new Error('Invalid message format');
-                } catch (error) {
-                    try {
-                        await manager.getMainHandler()?.onError?.(connection, error);
-                    } catch (err) {
-                        manager.log(
-                            'error',
-                            { err, connection: connection.id },
-                            'Error in onError handler',
-                        );
-                    }
+                } catch (err) {
+                    manager.log(
+                        'error',
+                        { err, connection: connection.id },
+                        'Error on parsing message',
+                    );
                     return;
                 }
+
+                const handlers = connection.msgHandler.get(message.type);
                 try {
-                    await manager.getMainHandler()?.onMessage?.(connection, message);
+                    if (handlers)
+                        await Promise.all(handlers.map((h) => h.onMessage?.(connection, message)));
                 } catch (err) {
                     manager.log(
                         'error',
@@ -146,17 +141,12 @@ function create(options: WSServerOptions = {}) {
             });
 
             // 处理错误
-            ws.on('error', async (error) => {
-                try {
-                    await manager.getMainHandler()?.onError?.(connection, error);
-                } catch (err) {
-                    manager.log(
-                        'error',
-                        { err, connection: connection.id },
-                        'Error in onError handler',
-                    );
-                    return;
-                }
+            ws.on('error', async (err) => {
+                manager.log(
+                    'error',
+                    { err, connection: connection.id },
+                    'Error on WebSocket connection',
+                );
             });
 
             // 处理断开连接
@@ -170,7 +160,7 @@ function create(options: WSServerOptions = {}) {
                 manager.removeConnection(connection.id);
 
                 try {
-                    await manager.getMainHandler()?.onDisconnect?.(connection);
+                    await Promise.all(connection.handlers.map((h) => h.onDisconnect?.(connection)));
                 } catch (error) {
                     manager.log(
                         'error',

@@ -7,18 +7,26 @@ export interface WSConnectionMetadata {
     remoteAddress?: string;
 }
 
+export interface WSConnectionLocals {}
+
 /**
  * WebSocket 连接及其元数据
  */
-export interface WSConnection<Locals extends Record<string, any> = Record<string, any>> {
+export interface WSConnection {
     ws: WebSocket;
     id: string;
     /** 连接的元数据 */
     readonly metadata: WSConnectionMetadata;
     /** 连接的本地数据 */
-    readonly locals: Partial<Locals>;
-    /** 事件处理器: 在多处理器模式下, 用于指定此连接实际使用的事件处理器 */
-    handler?: WSHandlers;
+    readonly locals: Partial<WSConnectionLocals>;
+    /**
+     * 处理器列表, 在连接时确定, 确保能正确覆盖完整生命周期
+     */
+    readonly handlers: ReadonlyArray<WSHandlers>;
+    /**
+     * 处理器列表, 消息类型到处理器的映射
+     */
+    readonly msgHandler: ReadonlyMap<string, WSHandlers[]>;
 
     /**
      * 发送消息
@@ -34,9 +42,9 @@ export interface WSConnection<Locals extends Record<string, any> = Record<string
 /**
  * WebSocket 消息结构
  */
-export interface WSMessage<T = any> {
-    type: string;
-    data: T;
+export interface WSMessage<Data = any, Type extends string = string> {
+    type: Type;
+    data: Data;
     timestamp?: number;
 }
 
@@ -45,7 +53,7 @@ export interface WSMessage<T = any> {
  *
  * @link https://github.com/pinojs/pino/blob/1e825f32a509ea452c59a143d507379ffe6ee00b/pino.d.ts#L341
  */
-export type WSLogFunction = <T, TMsg extends string = string>(
+export type WSLogFunction = <TMsg extends string = string>(
     type: 'bad_msg' | 'error',
     obj: {
         err?: any;
@@ -58,11 +66,13 @@ export type WSLogFunction = <T, TMsg extends string = string>(
 /**
  * WebSocket 事件处理器
  */
-export interface WSHandlers<Locals extends Record<string, any> = Record<string, any>> {
-    onConnect?: (connection: WSConnection<Locals>) => void | Promise<void>;
-    onDisconnect?: (connection: WSConnection<Locals>) => void | Promise<void>;
-    onMessage?: (connection: WSConnection<Locals>, message: WSMessage) => void | Promise<void>;
-    onError?: (connection: WSConnection<Locals>, error: unknown) => void | Promise<void>;
+export interface WSHandlers<MessageTypes extends string = string> {
+    onConnect?: (connection: WSConnection) => void | Promise<void>;
+    onDisconnect?: (connection: WSConnection) => void | Promise<void>;
+    onMessage?: (
+        connection: WSConnection,
+        message: WSMessage<any, MessageTypes>,
+    ) => void | Promise<void>;
 }
 
 /**
@@ -111,10 +121,9 @@ export interface WSManager {
      * 初始化 WebSocket 管理器
      *
      * 应在`hooks.server.js`中调用
-     * @param handler 主事件处理器
      * @param logger 日志记录器
      */
-    init(handler: WSHandlers, logger: WSLogFunction | undefined): void;
+    init(logger: WSLogFunction | undefined): void;
 
     /**
      * 获取所有活跃连接
@@ -149,12 +158,16 @@ export interface WSManager {
     /**
      * 添加事件处理器
      */
-    addHandler(id: string, handler: WSHandlers): void;
+    addHandler<MessageTypes extends string = string>(
+        type: MessageTypes[],
+        handler: WSHandlers<MessageTypes>,
+    ): void;
 
     /**
      * 获取事件处理器
+     * @param type 事件类型
      */
-    getHandler(id: string): WSHandlers | undefined;
+    getHandlers(type: string): WSHandlers[] | undefined;
 
     /**
      * 获取日志记录器

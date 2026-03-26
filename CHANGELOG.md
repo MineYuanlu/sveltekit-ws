@@ -2,6 +2,46 @@
 
 本项目 fork 自 [ketarketir/sveltekit-ws](https://github.com/ketarketir/sveltekit-ws)，基于 MIT 协议。
 
+## [1.4.0] - 2026-03-26
+
+### 核心变更：多处理器并行架构
+
+**原版本**：采用单一主处理器 (`mainHandler`) + 频道路由 (`channelHandler`) 模式，连接先经过主处理器，再通过 channel 消息分发到子处理器，每个连接同一时间只能绑定一个处理器。
+
+**新版本**：移除主处理器和频道路由概念，改为多处理器按消息类型并行触发。通过 `addHandler(types, handler)` 注册处理器时声明关心的消息类型，框架自动将消息分发给所有匹配的处理器。同一连接可同时被多个处理器服务。
+
+```typescript
+// Before — 频道路由模式
+manager.init(channelHandler, logger);
+manager.addHandler('chat', chatHandler);
+// 客户端需先发 { type: 'channel', data: 'chat' } 绑定处理器
+
+// After — 按消息类型并行触发
+manager.init(logger);
+manager.addHandler(['chat/send', 'chat/join'], chatHandler);
+manager.addHandler(['presence/update'], presenceHandler);
+// 消息直接按 type 分发，无需绑定步骤
+```
+
+### Breaking Changes
+
+- `init()` 移除 `handler` 参数，签名变为 `init(logger)`
+- `addHandler()` 签名从 `addHandler(id, handler)` 改为 `addHandler(types[], handler)`
+- `getHandler(id)` 改为 `getHandlers(type)`，返回处理器数组
+- 移除 `channelHandler` 导出（`server.ts` 不再导出）
+- 移除 `WSHandlers.onError` 回调，错误由框架统一记录
+- 移除 `WSConnection.handler` 属性，替换为 `handlers`（处理器列表）和 `msgHandler`（消息类型映射）
+- 移除 `WSConnection` / `WSHandlers` 的 `Locals` 泛型参数，改用 `WSConnectionLocals` 接口（支持 declaration merging）
+- `WSHandlers` 泛型参数改为 `MessageTypes extends string`，约束 `onMessage` 的消息类型
+- 连接建立时不再因缺少主处理器而销毁 socket
+
+### 新特性
+
+- **内部查询处理器**：新增 `TYPE_QUERY_HANDLER` 常量，客户端可查询当前连接加载的处理器支持哪些消息类型
+- **`WSMessage` 泛型增强**：支持 `WSMessage<Data, Type>` 形式，`Type` 参数约束消息类型字段
+- **`WSConnectionLocals` 接口**：通过 declaration merging 扩展连接本地数据类型，替代原有泛型方案
+- 客户端入口 (`client.ts`) 现导出所有常量，包括内部消息类型
+
 ## [1.3.4] - 2026-03-26
 
 ### 新特性

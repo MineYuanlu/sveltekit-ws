@@ -42,6 +42,7 @@ export function createWebSocketStore(config: WSStoreConfig = {}) {
         }));
 
         // Auto-identify if userId provided
+        // 不再需要先发 channel 消息，连接后直接发业务消息即可
         if (userId) {
           identify(userId, username, avatar_url);
         }

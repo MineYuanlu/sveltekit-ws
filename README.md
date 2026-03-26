@@ -10,7 +10,7 @@ WebSocket integration for SvelteKit without external server - seamlessly works i
 - 🔄 **Auto Reconnection** - Built-in reconnection logic with configurable attempts
 - 💪 **Type Safe** - Full TypeScript support with proper types
 - 🔌 **No External Server** - Integrated directly into Vite dev server and production
-- 🎯 **Channel Routing** - Multiple named handlers via `channelHandler`
+- 🎯 **Message-Type Routing** - Multiple handlers triggered by message type
 - 💗 **Heartbeat Support** - Automatic ping/pong to keep connections alive
 - 🛡️ **Client Verification** - Custom authentication/authorization hooks
 - 📦 **Small Bundle** - Minimal dependencies
@@ -45,17 +45,17 @@ export default defineConfig({
 
 ### 2. Server Initialization (hooks.server.ts)
 
-Register handlers and initialize the manager in SvelteKit's `init` hook.
+Register handlers and initialize the manager in SvelteKit's `init` hook. Each handler declares which message types it handles.
 
 ```typescript
 import type { ServerInit } from "@sveltejs/kit";
-import { channelHandler, getWebSocketManager } from "@yuanlu_yl/sveltekit-ws/server";
+import { getWebSocketManager } from "@yuanlu_yl/sveltekit-ws/server";
 
 export const init: ServerInit = async () => {
   const manager = getWebSocketManager();
 
-  // Register a named channel handler
-  manager.addHandler("chat", {
+  // Register a handler with the message types it handles
+  manager.addHandler(["chat/send", "chat/join"], {
     onConnect(connection) {
       manager.send(connection.id, {
         type: "welcome",
@@ -63,7 +63,7 @@ export const init: ServerInit = async () => {
       });
     },
     onMessage(connection, message) {
-      // Broadcast to all except sender
+      // Only receives messages with type "chat/send" or "chat/join"
       manager.broadcast({ type: "chat", data: message.data }, [connection.id]);
     },
     onDisconnect(connection) {
@@ -71,9 +71,7 @@ export const init: ServerInit = async () => {
     },
   });
 
-  // channelHandler routes connections to named handlers
-  // The client must first send { type: "channel", data: "chat" } to select a handler
-  manager.init(channelHandler, (type, obj, msg, ...args) => {
+  manager.init((type, obj, msg, ...args) => {
     if (type === "error") console.error("[WS]", obj, msg, ...args);
     else if (type === "bad_msg") console.warn("[WS]", obj, msg, ...args);
   });
@@ -100,7 +98,7 @@ server.listen(PORT);
 
 ### 4. Client Side
 
-The client must first send a `channel` message to select a handler, then communicate normally.
+Connect and send messages directly — no channel selection step needed.
 
 ```svelte
 <script lang="ts">
@@ -118,8 +116,7 @@ The client must first send a `channel` message to select a handler, then communi
 
     ws.onopen = () => {
       connected = true;
-      // Select the "chat" channel handler
-      ws!.send(JSON.stringify({ type: "channel", data: "chat" }));
+      // Send messages directly — the server routes by message type
     };
 
     ws.onmessage = (event) => {
@@ -133,28 +130,22 @@ The client must first send a `channel` message to select a handler, then communi
   onDestroy(() => ws?.close());
 
   function sendMessage(text: string) {
-    ws?.send(JSON.stringify({ type: "chat", data: { text } }));
+    ws?.send(JSON.stringify({ type: "chat/send", data: { text } }));
   }
 </script>
 ```
 
-## Channel Routing
+## Message-Type Routing
 
-`channelHandler` enables multiple named handlers on a single WebSocket endpoint. The client selects a handler by sending a channel message as its first message:
-
-```json
-{ "type": "channel", "data": "handler-name" }
-```
-
-After that, all messages are routed to the selected handler's `onMessage`. If the channel name is unknown or the first message is not a channel selection, the connection is dropped.
+Handlers are registered with the message types they handle. When a message arrives, the framework dispatches it to all handlers that registered for that message type. Multiple handlers can process the same message type, and a single handler can handle multiple types.
 
 ```typescript
-// Register multiple handlers
-manager.addHandler("chat", chatHandlers);
-manager.addHandler("notifications", notificationHandlers);
-manager.addHandler("game", gameHandlers);
+// Register multiple handlers — each declares its message types
+manager.addHandler(["chat/send", "chat/join"], chatHandlers);
+manager.addHandler(["notification/push"], notificationHandlers);
+manager.addHandler(["game/move", "game/join"], gameHandlers);
 
-manager.init(channelHandler, logger);
+manager.init(logger);
 ```
 
 ## Connection Management
@@ -215,23 +206,25 @@ viteWebSocketServer({
 ## Message Types
 
 ```typescript
-interface WSMessage<T = any> {
-  type: string;
-  data: T;
+interface WSMessage<Data = any, Type extends string = string> {
+  type: Type;
+  data: Data;
   timestamp?: number;
 }
 
 interface WSConnection {
   ws: WebSocket;
   id: string;
-  metadata?: Record<string, any>;
-  handler?: WSHandlers; // set by channelHandler after channel selection
+  readonly metadata: WSConnectionMetadata;
+  readonly locals: Partial<WSConnectionLocals>;
+  readonly handlers: ReadonlyArray<WSHandlers>;
+  readonly msgHandler: ReadonlyMap<string, WSHandlers[]>;
 }
 ```
 
 ## Examples
 
-Check the `/examples` directory for a complete chat application using channel routing.
+Check the `/examples` directory for a complete chat application.
 
 ## Deployment
 

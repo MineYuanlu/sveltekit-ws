@@ -4,7 +4,6 @@ import { WebSocketServer, WebSocket } from 'ws';
 import type { WSMessage, WSServerOptions } from './types.js';
 import { getWebSocketManagerImpl } from './manager.js';
 import type { Plugin, ViteDevServer } from 'vite';
-import { TYPE_QUERY_HANDLER, TYPE_QUERY_HANDLER_RESPONSE } from './consts.js';
 
 export function isWSMessage(message: unknown): message is WSMessage {
     if (!message || typeof message !== 'object') return false;

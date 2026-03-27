@@ -1,6 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { WebSocketManager } from '../src/manager';
 import type { WebSocket } from 'ws';
+import type { WSConnectionMetadata } from '../src/types';
+
+const defaultMetadata: WSConnectionMetadata = {
+    headers: {},
+    url: '/ws',
+    remoteAddress: '127.0.0.1',
+};
 
 describe('WebSocketManager', () => {
     let manager: WebSocketManager;
@@ -11,7 +18,7 @@ describe('WebSocketManager', () => {
         mockWs = {
             readyState: 1, // OPEN
             send: vi.fn(),
-            close: vi.fn()
+            close: vi.fn(),
         };
     });
 
@@ -20,7 +27,7 @@ describe('WebSocketManager', () => {
     });
 
     it('should add connection', () => {
-        const connection = manager.addConnection(mockWs as WebSocket);
+        const connection = manager.addConnection(mockWs as WebSocket, defaultMetadata);
 
         expect(connection).toBeDefined();
         expect(connection.id).toBeDefined();
@@ -29,30 +36,30 @@ describe('WebSocketManager', () => {
     });
 
     it('should get connection by id', () => {
-        const connection = manager.addConnection(mockWs as WebSocket);
+        const connection = manager.addConnection(mockWs as WebSocket, defaultMetadata);
         const retrieved = manager.getConnection(connection.id);
 
         expect(retrieved).toBe(connection);
     });
 
     it('should send message to specific connection', () => {
-        const connection = manager.addConnection(mockWs as WebSocket);
+        const connection = manager.addConnection(mockWs as WebSocket, defaultMetadata);
         const message = { type: 'test', data: { value: 'hello' } };
 
         const result = manager.send(connection.id, message);
 
         expect(result).toBe(true);
         expect(mockWs.send).toHaveBeenCalledWith(
-            expect.stringContaining('"type":"test"')
+            expect.stringContaining('"type":"test"'),
         );
     });
 
     it('should broadcast to all connections', () => {
-        const ws1 = { ...mockWs };
-        const ws2 = { ...mockWs };
+        const ws1 = { readyState: 1, send: vi.fn(), close: vi.fn() } as Partial<WebSocket>;
+        const ws2 = { readyState: 1, send: vi.fn(), close: vi.fn() } as Partial<WebSocket>;
 
-        manager.addConnection(ws1 as WebSocket);
-        manager.addConnection(ws2 as WebSocket);
+        manager.addConnection(ws1 as WebSocket, defaultMetadata);
+        manager.addConnection(ws2 as WebSocket, defaultMetadata);
 
         const message = { type: 'broadcast', data: 'hello all' };
         manager.broadcast(message);
@@ -62,11 +69,11 @@ describe('WebSocketManager', () => {
     });
 
     it('should broadcast excluding specific connections', () => {
-        const ws1 = { ...mockWs, send: vi.fn() };
-        const ws2 = { ...mockWs, send: vi.fn() };
+        const ws1 = { readyState: 1, send: vi.fn(), close: vi.fn() } as Partial<WebSocket>;
+        const ws2 = { readyState: 1, send: vi.fn(), close: vi.fn() } as Partial<WebSocket>;
 
-        const conn1 = manager.addConnection(ws1 as WebSocket);
-        const conn2 = manager.addConnection(ws2 as WebSocket);
+        const conn1 = manager.addConnection(ws1 as WebSocket, defaultMetadata);
+        manager.addConnection(ws2 as WebSocket, defaultMetadata);
 
         const message = { type: 'broadcast', data: 'hello' };
         manager.broadcast(message, [conn1.id]);
@@ -76,7 +83,7 @@ describe('WebSocketManager', () => {
     });
 
     it('should remove connection', () => {
-        const connection = manager.addConnection(mockWs as WebSocket);
+        const connection = manager.addConnection(mockWs as WebSocket, defaultMetadata);
 
         expect(manager.size()).toBe(1);
 
@@ -87,7 +94,7 @@ describe('WebSocketManager', () => {
     });
 
     it('should disconnect connection', () => {
-        const connection = manager.addConnection(mockWs as WebSocket);
+        const connection = manager.addConnection(mockWs as WebSocket, defaultMetadata);
 
         const disconnected = manager.disconnect(connection.id);
 
@@ -97,9 +104,9 @@ describe('WebSocketManager', () => {
     });
 
     it('should clear all connections', () => {
-        manager.addConnection({ ...mockWs } as WebSocket);
-        manager.addConnection({ ...mockWs } as WebSocket);
-        manager.addConnection({ ...mockWs } as WebSocket);
+        manager.addConnection({ readyState: 1, send: vi.fn(), close: vi.fn() } as Partial<WebSocket> as WebSocket, defaultMetadata);
+        manager.addConnection({ readyState: 1, send: vi.fn(), close: vi.fn() } as Partial<WebSocket> as WebSocket, defaultMetadata);
+        manager.addConnection({ readyState: 1, send: vi.fn(), close: vi.fn() } as Partial<WebSocket> as WebSocket, defaultMetadata);
 
         expect(manager.size()).toBe(3);
 
@@ -111,29 +118,53 @@ describe('WebSocketManager', () => {
     it('should handle send to non-existent connection', () => {
         const result = manager.send('non-existent-id', {
             type: 'test',
-            data: 'hello'
+            data: 'hello',
         });
 
         expect(result).toBe(false);
     });
 
     it('should handle send to closed connection', () => {
-        const closedWs = { ...mockWs, readyState: 3 }; // CLOSED
-        const connection = manager.addConnection(closedWs as WebSocket);
+        const closedWs = { readyState: 3, send: vi.fn(), close: vi.fn() } as Partial<WebSocket>;
+        const connection = manager.addConnection(closedWs as WebSocket, defaultMetadata);
 
         const result = manager.send(connection.id, {
             type: 'test',
-            data: 'hello'
+            data: 'hello',
         });
 
         expect(result).toBe(false);
     });
 
-    it('should add metadata to connection', () => {
-        const metadata = { userId: '123', username: 'test' };
+    it('should store metadata on connection', () => {
+        const metadata: WSConnectionMetadata = {
+            headers: { 'x-custom': 'value' },
+            url: '/ws',
+            remoteAddress: '192.168.1.1',
+        };
         const connection = manager.addConnection(mockWs as WebSocket, metadata);
 
         expect(connection.metadata).toEqual(metadata);
+    });
+
+    it('should add and remove handlers', () => {
+        const handler = { onMessage: vi.fn() };
+        manager.addHandler(['test-type'], handler);
+
+        expect(manager.getHandlers('test-type')).toContain(handler);
+
+        manager.removeHandler(handler);
+
+        expect(manager.getHandlers('test-type')).toBeUndefined();
+    });
+
+    it('should return all connections', () => {
+        manager.addConnection(mockWs as WebSocket, defaultMetadata);
+        const ws2 = { readyState: 1, send: vi.fn(), close: vi.fn() } as Partial<WebSocket>;
+        manager.addConnection(ws2 as WebSocket, defaultMetadata);
+
+        const connections = manager.getConnections();
+        expect(connections.size).toBe(2);
     });
 });
 
@@ -145,12 +176,13 @@ describe('Message Format', () => {
         manager = new WebSocketManager();
         mockWs = {
             readyState: 1,
-            send: vi.fn()
+            send: vi.fn(),
+            close: vi.fn(),
         };
     });
 
     it('should include timestamp in sent messages', () => {
-        const connection = manager.addConnection(mockWs as WebSocket);
+        const connection = manager.addConnection(mockWs as WebSocket, defaultMetadata);
         const message = { type: 'test', data: 'hello' };
 
         manager.send(connection.id, message);
@@ -163,7 +195,7 @@ describe('Message Format', () => {
     });
 
     it('should preserve existing timestamp', () => {
-        const connection = manager.addConnection(mockWs as WebSocket);
+        const connection = manager.addConnection(mockWs as WebSocket, defaultMetadata);
         const timestamp = 1234567890;
         const message = { type: 'test', data: 'hello', timestamp };
 

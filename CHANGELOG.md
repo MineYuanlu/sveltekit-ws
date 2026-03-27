@@ -2,6 +2,25 @@
 
 本项目 fork 自 [ketarketir/sveltekit-ws](https://github.com/ketarketir/sveltekit-ws)，基于 MIT 协议。
 
+## [1.5.0] - 2026-03-27
+
+### 重构
+
+- **模块结构分离**：将代码重构为 `common/`、`client/`、`server/` 三个独立模块目录：
+  - `common/` — 公共类型（`WSMessage`）、工具函数（`isWSMessage`）和常量，通过根导出 `@yuanlu_yl/sveltekit-ws` 引入
+  - `client/` — 客户端专用类型（`WSHandlers`），通过 `@yuanlu_yl/sveltekit-ws/client` 引入
+  - `server/` — 服务端核心逻辑，通过 `@yuanlu_yl/sveltekit-ws/server` 引入
+
+### 新特性
+
+- **根导出入口**：新增 `"."` 导出，可直接通过 `import { WSMessage, isWSMessage } from '@yuanlu_yl/sveltekit-ws'` 引入公共模块
+- **客户端 `WSHandlers` 类型**：新增客户端专用的 `WSHandlers` 接口，包含 `onConnect`、`onDisconnect`、`onMessage` 回调
+
+### 修复
+
+- **URL 解析优化**：WebSocket 升级请求的 URL 解析不再依赖 `request.headers.host`，避免在某些代理环境下解析失败
+- **`removeHandler` 类型修正**：参数类型从 `WSHandlers` 改为 `WSHandlers<any>`，修复泛型不兼容问题
+
 ## [1.4.1] - 2026-03-27
 
 ### 新特性

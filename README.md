@@ -208,6 +208,18 @@ viteWebSocketServer({
 
 ## Message Types
 
+Common types are available from the root export:
+
+```typescript
+import { WSMessage, isWSMessage } from "@yuanlu_yl/sveltekit-ws";
+```
+
+Server types are available from the server export:
+
+```typescript
+import type { WSConnection, WSManager, WSHandlers } from "@yuanlu_yl/sveltekit-ws/server";
+```
+
 ```typescript
 interface WSMessage<Data = any, Type extends string = string> {
   type: Type;

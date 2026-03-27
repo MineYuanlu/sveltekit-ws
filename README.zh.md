@@ -208,6 +208,18 @@ viteWebSocketServer({
 
 ## 消息类型
 
+公共类型可从根导出引入：
+
+```typescript
+import { WSMessage, isWSMessage } from "@yuanlu_yl/sveltekit-ws";
+```
+
+服务端类型从 server 导出引入：
+
+```typescript
+import type { WSConnection, WSManager, WSHandlers } from "@yuanlu_yl/sveltekit-ws/server";
+```
+
 ```typescript
 interface WSMessage<Data = any, Type extends string = string> {
   type: Type;

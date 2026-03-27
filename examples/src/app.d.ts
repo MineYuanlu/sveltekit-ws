@@ -1,6 +1,6 @@
 import { WebSocketHelper } from './lib/websocket';
 
-declare module '@yuanlu_yl/sveltekit-ws/client' {
+declare module '@yuanlu_yl/sveltekit-ws/server' {
     interface WSConnectionLocals {
         userId?: string;
         username?: string;

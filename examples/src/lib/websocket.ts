@@ -1,9 +1,9 @@
 import { type RequestEvent } from '@sveltejs/kit';
-import { getWebSocketManager, createWebSocketHandler, type WebSocketManager } from "sveltekit-ws";
+import { getWebSocketManager, createWebSocketHandler, type WSManager } from "@yuanlu_yl/sveltekit-ws/server";
 
 export class WebSocketHelper {
   private event: RequestEvent;
-  private wsManager: WebSocketManager;
+  private wsManager: WSManager;
   constructor(event: RequestEvent) {
     this.event = event;
     this.wsManager = getWebSocketManager();

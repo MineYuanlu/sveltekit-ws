@@ -4,8 +4,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import type { WSServerOptions } from './types.js';
 import { getWebSocketManagerImpl } from './manager.js';
 import type { Plugin, ViteDevServer } from 'vite';
-import { WSMessage } from '../common/types.js';
 import { isWSMessage } from '../common/helper.js';
+import type { WSMessage } from '../common/types.js';
 
 function create(options: WSServerOptions = {}) {
     const {
@@ -61,7 +61,7 @@ function create(options: WSServerOptions = {}) {
             });
 
             try {
-                await Promise.all(connection.handlers.map((h) => h.onConnect?.(connection)));
+                await manager.getMainHandler().onConnect?.(connection);
             } catch (err) {
                 try {
                     manager.log(
@@ -120,10 +120,8 @@ function create(options: WSServerOptions = {}) {
                     return;
                 }
 
-                const handlers = connection.msgHandler.get(message.type);
                 try {
-                    if (handlers)
-                        await Promise.all(handlers.map((h) => h.onMessage?.(connection, message)));
+                    await manager.getMainHandler().onMessage?.(connection, message);
                 } catch (err) {
                     manager.log(
                         'error',
@@ -154,7 +152,7 @@ function create(options: WSServerOptions = {}) {
                 manager.removeConnection(connection.id);
 
                 try {
-                    await Promise.all(connection.handlers.map((h) => h.onDisconnect?.(connection)));
+                    await manager.getMainHandler().onDisconnect?.(connection);
                 } catch (error) {
                     manager.log(
                         'error',

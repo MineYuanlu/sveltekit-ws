@@ -1,5 +1,6 @@
 import { TYPE_QUERY_HANDLER, TYPE_QUERY_HANDLER_RESPONSE } from '../common/consts';
-import { WSManager } from './types';
+import { getWebSocketManagerImpl } from './manager';
+import type { WSHandlers, WSManager } from './types';
 
 /** 注册内部处理器 */
 export function initInternalHandler(manager: WSManager) {
@@ -14,3 +15,16 @@ export function initInternalHandler(manager: WSManager) {
         },
     });
 }
+
+export const defaultHandler: WSHandlers = {
+    async onConnect(connection) {
+        await Promise.all(connection.handlers.map((h) => h.onConnect?.(connection)));
+    },
+    async onMessage(connection, message) {
+        const handlers = connection.msgHandler.get(message.type);
+        if (handlers) await Promise.all(handlers.map((h) => h.onMessage?.(connection, message)));
+    },
+    async onDisconnect(connection) {
+        await Promise.all(connection.handlers.map((h) => h.onDisconnect?.(connection)));
+    },
+};

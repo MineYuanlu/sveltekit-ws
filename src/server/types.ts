@@ -1,6 +1,6 @@
 import type { IncomingHttpHeaders } from 'node:http';
 import type { WebSocket } from 'ws';
-import { WSMessage } from '../common/types';
+import type { WSMessage } from '../common/types';
 
 export interface WSConnectionMetadata {
     url?: string;
@@ -13,7 +13,7 @@ export interface WSConnectionLocals {}
 /**
  * WebSocket 连接及其元数据
  */
-export interface WSConnection {
+export interface WSConnection<ResponseType extends WSMessage = WSMessage> {
     ws: WebSocket;
     id: string;
     /** 连接的元数据 */
@@ -34,7 +34,7 @@ export interface WSConnection {
      *
      * @return 是否发送成功
      */
-    send(message: WSMessage): boolean;
+    send(message: ResponseType): boolean;
     sendRaw(payload: Parameters<WebSocket['send']>[0]): boolean;
 
     disconnect(): boolean;
@@ -58,11 +58,14 @@ export type WSLogFunction = <TMsg extends string = string>(
 /**
  * WebSocket 事件处理器
  */
-export interface WSHandlers<MessageTypes extends string = string> {
-    onConnect?: (connection: WSConnection) => void | Promise<void>;
-    onDisconnect?: (connection: WSConnection) => void | Promise<void>;
+export interface WSHandlers<
+    MessageTypes extends string = string,
+    ResponseType extends WSMessage = WSMessage,
+> {
+    onConnect?: (connection: WSConnection<ResponseType>) => void | Promise<void>;
+    onDisconnect?: (connection: WSConnection<ResponseType>) => void | Promise<void>;
     onMessage?: (
-        connection: WSConnection,
+        connection: WSConnection<ResponseType>,
         message: WSMessage<any, MessageTypes>,
     ) => void | Promise<void>;
 }
@@ -118,6 +121,16 @@ export interface WSManager {
     init(logger: WSLogFunction | undefined): void;
 
     /**
+     * 设置自定义主事件处理器
+     */
+    setMainHandler(handler: WSHandlers<any, any>): void;
+
+    /**
+     * 将主事件处理器重置为内置默认处理器
+     */
+    resetMainHandler(): void;
+
+    /**
      * 获取所有活跃连接
      */
     getConnections(): Map<string, WSConnection>;
@@ -150,15 +163,15 @@ export interface WSManager {
     /**
      * 添加事件处理器
      */
-    addHandler<MessageTypes extends string = string>(
-        type: MessageTypes[],
-        handler: WSHandlers<MessageTypes>,
+    addHandler<ResponseType extends WSMessage, MessageTypes extends string = string>(
+        type: readonly MessageTypes[],
+        handler: WSHandlers<MessageTypes, ResponseType>,
     ): void;
 
     /**
      * 移除事件处理器
      */
-    removeHandler(handler: WSHandlers<any>): void;
+    removeHandler(handler: WSHandlers<any, any>): void;
 
     /**
      * 获取事件处理器

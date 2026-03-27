@@ -8,7 +8,7 @@ import type {
     WSConnectionLocals,
 } from './types.js';
 import type { WSMessage } from '../common/types.js';
-import { initInternalHandler } from './handler.js';
+import { defaultHandler, initInternalHandler } from './handler.js';
 
 const IdPrefix = Math.random().toString(36).substring(2);
 let IdIndex = 0;
@@ -87,6 +87,7 @@ export class WebSocketManager implements WSManager {
     private readonly handlers: WSHandlers<any>[] = [];
     private readonly msgHandler: Map<string, WSHandlers<any>[]> = new Map();
     private logger: WSLogFunction | undefined;
+    private mainHandler: WSHandlers<any> = defaultHandler;
 
     constructor() {
         initInternalHandler(this);
@@ -96,6 +97,18 @@ export class WebSocketManager implements WSManager {
      */
     init(logger: WSLogFunction | undefined) {
         this.logger = logger;
+    }
+
+    setMainHandler(handler: WSHandlers<any, any>): void {
+        this.mainHandler = handler;
+    }
+
+    resetMainHandler(): void {
+        this.mainHandler = defaultHandler;
+    }
+
+    getMainHandler(): WSHandlers {
+        return this.mainHandler;
     }
 
     /**
@@ -132,7 +145,7 @@ export class WebSocketManager implements WSManager {
      * 添加事件处理器
      */
     addHandler<MessageTypes extends string = string>(
-        types: MessageTypes[],
+        types: readonly MessageTypes[],
         handler: WSHandlers<MessageTypes>,
     ): void {
         types.forEach((type) => {

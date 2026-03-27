@@ -170,6 +170,9 @@ const connections = manager.getConnections();
 // Disconnect a client
 manager.disconnect("connection-id");
 
+// Remove a handler
+manager.removeHandler(chatHandlers);
+
 // Get connection count
 const count = manager.size();
 ```

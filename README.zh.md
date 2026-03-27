@@ -170,6 +170,9 @@ const connections = manager.getConnections();
 // 断开某个客户端
 manager.disconnect("connection-id");
 
+// 移除处理器
+manager.removeHandler(chatHandlers);
+
 // 获取连接数
 const count = manager.size();
 ```

@@ -2,6 +2,16 @@
 
 本项目 fork 自 [ketarketir/sveltekit-ws](https://github.com/ketarketir/sveltekit-ws)，基于 MIT 协议。
 
+## [1.4.1] - 2026-03-27
+
+### 新特性
+
+- **移除处理器**：新增 `manager.removeHandler(handler)` 方法，支持动态移除已注册的事件处理器，同时清理其关联的消息类型映射。
+
+### 改进
+
+- **`sendRaw` 类型放宽**：`WSConnection.sendRaw` 参数类型从 `string` 放宽为 `Parameters<WebSocket['send']>[0]`，支持发送 `Buffer`、`ArrayBuffer` 等二进制数据。
+
 ## [1.4.0] - 2026-03-26
 
 ### 核心变更：多处理器并行架构

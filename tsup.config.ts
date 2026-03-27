@@ -2,8 +2,9 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
     entry: {
-        client: 'src/client.ts',
-        server: 'src/server.ts',
+        index: 'src/common/index.ts',
+        client: 'src/client/index.ts',
+        server: 'src/server/index.ts',
     },
     format: ['esm'],
     dts: true,

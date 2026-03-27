@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { TYPE_QUERY_HANDLER, TYPE_QUERY_HANDLER_RESPONSE } from '../src/consts';
 import { initInternalHandler } from '../src/handler';
-import type { WSManager, WSConnection, WSMessage } from '../src/types';
+import type { WSManager, WSConnection, WSMessage } from '../src/server/types';
 
 describe('initInternalHandler', () => {
     it('should register handler for TYPE_QUERY_HANDLER', () => {

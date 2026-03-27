@@ -1,4 +1,4 @@
-import { TYPE_QUERY_HANDLER, TYPE_QUERY_HANDLER_RESPONSE } from './consts';
+import { TYPE_QUERY_HANDLER, TYPE_QUERY_HANDLER_RESPONSE } from '../common/consts';
 import { WSManager } from './types';
 
 /** 注册内部处理器 */

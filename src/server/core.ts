@@ -1,16 +1,11 @@
 import type { Server as HTTPServer, IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
 import { WebSocketServer, WebSocket } from 'ws';
-import type { WSMessage, WSServerOptions } from './types.js';
+import type { WSServerOptions } from './types.js';
 import { getWebSocketManagerImpl } from './manager.js';
 import type { Plugin, ViteDevServer } from 'vite';
-
-export function isWSMessage(message: unknown): message is WSMessage {
-    if (!message || typeof message !== 'object') return false;
-    const msg = message as WSMessage;
-    if (typeof msg.type !== 'string') return false;
-    return true;
-}
+import { WSMessage } from '../common/types.js';
+import { isWSMessage } from '../common/helper.js';
 
 function create(options: WSServerOptions = {}) {
     const {
@@ -48,7 +43,7 @@ function create(options: WSServerOptions = {}) {
 
         // 处理升级请求
         httpServer.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
-            const url = new URL(request.url || '', `http://${request.headers.host}`);
+            const url = new URL(`http://localhost${request.url}`);
 
             if (url.pathname !== path) return;
 

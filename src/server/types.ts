@@ -1,5 +1,6 @@
 import type { IncomingHttpHeaders } from 'node:http';
 import type { WebSocket } from 'ws';
+import { WSMessage } from '../common/types';
 
 export interface WSConnectionMetadata {
     url?: string;
@@ -37,15 +38,6 @@ export interface WSConnection {
     sendRaw(payload: Parameters<WebSocket['send']>[0]): boolean;
 
     disconnect(): boolean;
-}
-
-/**
- * WebSocket 消息结构
- */
-export interface WSMessage<Data = any, Type extends string = string> {
-    type: Type;
-    data: Data;
-    timestamp?: number;
 }
 
 /**
@@ -166,7 +158,7 @@ export interface WSManager {
     /**
      * 移除事件处理器
      */
-    removeHandler(handler: WSHandlers): void;
+    removeHandler(handler: WSHandlers<any>): void;
 
     /**
      * 获取事件处理器

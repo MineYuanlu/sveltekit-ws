@@ -1,13 +1,13 @@
 import type { WebSocket } from 'ws';
 import type {
     WSConnection,
-    WSMessage,
     WSManager,
     WSHandlers,
     WSLogFunction,
     WSConnectionMetadata,
     WSConnectionLocals,
 } from './types.js';
+import type { WSMessage } from '../common/types.js';
 import { initInternalHandler } from './handler.js';
 
 const IdPrefix = Math.random().toString(36).substring(2);
@@ -146,7 +146,7 @@ export class WebSocketManager implements WSManager {
     /**
      * 移除事件处理器
      */
-    removeHandler(handler: WSHandlers): void {
+    removeHandler(handler: WSHandlers<any>): void {
         const rem = (arr: WSHandlers<any>[]) => {
             for (let i = arr.length - 1; i >= 0; i--) {
                 if (arr[i] === handler) arr.splice(i, 1);

@@ -135,6 +135,39 @@ Connect and send messages directly — no channel selection step needed.
 </script>
 ```
 
+## Custom Main Handler
+
+By default, when a WebSocket event fires, the framework iterates all registered handlers in parallel. You can replace this behavior with `setMainHandler` to inject custom logic before handler execution — for example, setting up `AsyncLocalStorage` context:
+
+```typescript
+import { AsyncLocalStorage } from "node:async_hooks";
+import { getWebSocketManager, defaultHandler } from "@yuanlu_yl/sveltekit-ws/server";
+
+const als = new AsyncLocalStorage<{ connectionId: string }>();
+
+const manager = getWebSocketManager();
+manager.setMainHandler({
+  async onConnect(connection) {
+    await als.run({ connectionId: connection.id }, () =>
+      defaultHandler.onConnect!(connection),
+    );
+  },
+  async onMessage(connection, message) {
+    await als.run({ connectionId: connection.id }, () =>
+      defaultHandler.onMessage!(connection, message),
+    );
+  },
+  async onDisconnect(connection) {
+    await als.run({ connectionId: connection.id }, () =>
+      defaultHandler.onDisconnect!(connection),
+    );
+  },
+});
+
+// Reset to default behavior
+// manager.resetMainHandler();
+```
+
 ## Message-Type Routing
 
 Handlers are registered with the message types they handle. When a message arrives, the framework dispatches it to all handlers that registered for that message type. Multiple handlers can process the same message type, and a single handler can handle multiple types.
@@ -217,7 +250,7 @@ import { WSMessage, isWSMessage } from "@yuanlu_yl/sveltekit-ws";
 Server types are available from the server export:
 
 ```typescript
-import type { WSConnection, WSManager, WSHandlers } from "@yuanlu_yl/sveltekit-ws/server";
+import type { WSConnection, WSManager, WSHandlers, defaultHandler } from "@yuanlu_yl/sveltekit-ws/server";
 ```
 
 ```typescript
@@ -227,7 +260,7 @@ interface WSMessage<Data = any, Type extends string = string> {
   timestamp?: number;
 }
 
-interface WSConnection {
+interface WSConnection<ResponseType extends WSMessage = WSMessage> {
   ws: WebSocket;
   id: string;
   readonly metadata: WSConnectionMetadata;

@@ -135,6 +135,39 @@ server.listen(PORT);
 </script>
 ```
 
+## 自定义主处理器
+
+默认情况下，WebSocket 事件触发时，框架会遍历所有注册的处理器并行调用。你可以通过 `setMainHandler` 替换这一行为，在处理器执行前注入自定义逻辑，例如设置 `AsyncLocalStorage` 上下文：
+
+```typescript
+import { AsyncLocalStorage } from "node:async_hooks";
+import { getWebSocketManager, defaultHandler } from "@yuanlu_yl/sveltekit-ws/server";
+
+const als = new AsyncLocalStorage<{ connectionId: string }>();
+
+const manager = getWebSocketManager();
+manager.setMainHandler({
+  async onConnect(connection) {
+    await als.run({ connectionId: connection.id }, () =>
+      defaultHandler.onConnect!(connection),
+    );
+  },
+  async onMessage(connection, message) {
+    await als.run({ connectionId: connection.id }, () =>
+      defaultHandler.onMessage!(connection, message),
+    );
+  },
+  async onDisconnect(connection) {
+    await als.run({ connectionId: connection.id }, () =>
+      defaultHandler.onDisconnect!(connection),
+    );
+  },
+});
+
+// 重置为默认行为
+// manager.resetMainHandler();
+```
+
 ## 消息类型路由
 
 处理器在注册时声明自己处理的消息类型。当消息到达时，框架将其分发给所有注册了该消息类型的处理器。多个处理器可以处理同一消息类型，单个处理器也可以处理多种类型。
@@ -217,7 +250,7 @@ import { WSMessage, isWSMessage } from "@yuanlu_yl/sveltekit-ws";
 服务端类型从 server 导出引入：
 
 ```typescript
-import type { WSConnection, WSManager, WSHandlers } from "@yuanlu_yl/sveltekit-ws/server";
+import type { WSConnection, WSManager, WSHandlers, defaultHandler } from "@yuanlu_yl/sveltekit-ws/server";
 ```
 
 ```typescript
@@ -227,7 +260,7 @@ interface WSMessage<Data = any, Type extends string = string> {
   timestamp?: number;
 }
 
-interface WSConnection {
+interface WSConnection<ResponseType extends WSMessage = WSMessage> {
   ws: WebSocket;
   id: string;
   readonly metadata: WSConnectionMetadata;

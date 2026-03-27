@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isWSMessage } from '../src/core';
+import { isWSMessage } from '../src/common/helper';
 
 describe('isWSMessage', () => {
     it('should return true for valid message', () => {

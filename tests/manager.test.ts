@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { WebSocketManager } from '../src/manager';
+import { WebSocketManager } from '../src/server/manager';
 import type { WebSocket } from 'ws';
-import type { WSConnectionMetadata } from '../src/types';
+import type { WSConnectionMetadata } from '../src/server/types';
 
 const defaultMetadata: WSConnectionMetadata = {
     headers: {},
@@ -49,9 +49,7 @@ describe('WebSocketManager', () => {
         const result = manager.send(connection.id, message);
 
         expect(result).toBe(true);
-        expect(mockWs.send).toHaveBeenCalledWith(
-            expect.stringContaining('"type":"test"'),
-        );
+        expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('"type":"test"'));
     });
 
     it('should broadcast to all connections', () => {
@@ -104,9 +102,18 @@ describe('WebSocketManager', () => {
     });
 
     it('should clear all connections', () => {
-        manager.addConnection({ readyState: 1, send: vi.fn(), close: vi.fn() } as Partial<WebSocket> as WebSocket, defaultMetadata);
-        manager.addConnection({ readyState: 1, send: vi.fn(), close: vi.fn() } as Partial<WebSocket> as WebSocket, defaultMetadata);
-        manager.addConnection({ readyState: 1, send: vi.fn(), close: vi.fn() } as Partial<WebSocket> as WebSocket, defaultMetadata);
+        manager.addConnection(
+            { readyState: 1, send: vi.fn(), close: vi.fn() } as Partial<WebSocket> as WebSocket,
+            defaultMetadata,
+        );
+        manager.addConnection(
+            { readyState: 1, send: vi.fn(), close: vi.fn() } as Partial<WebSocket> as WebSocket,
+            defaultMetadata,
+        );
+        manager.addConnection(
+            { readyState: 1, send: vi.fn(), close: vi.fn() } as Partial<WebSocket> as WebSocket,
+            defaultMetadata,
+        );
 
         expect(manager.size()).toBe(3);
 

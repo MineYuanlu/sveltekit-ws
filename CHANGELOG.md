@@ -2,6 +2,20 @@
 
 本项目 fork 自 [ketarketir/sveltekit-ws](https://github.com/ketarketir/sveltekit-ws)，基于 MIT 协议。
 
+## [1.5.1] - 2026-03-27
+
+### 新特性
+
+- **主处理器（Main Handler）**：新增 `manager.setMainHandler(handler)` 和 `manager.resetMainHandler()` 方法，允许自定义事件处理的入口逻辑。默认主处理器 `defaultHandler` 保持原有行为（遍历所有注册处理器并行调用），用户可替换为自定义实现，例如在调用处理器前注入 `AsyncLocalStorage` 上下文
+- **`defaultHandler` 导出**：从 `@yuanlu_yl/sveltekit-ws/server` 导出内置默认主处理器，方便自定义主处理器时复用
+
+### 类型改进
+
+- **`WSHandlers` 新增 `ResponseType` 泛型**：`WSHandlers<MessageTypes, ResponseType>` 支持约束 `connection.send()` 的消息类型
+- **`WSConnection` 新增 `ResponseType` 泛型**：`WSConnection<ResponseType>` 约束 `send` 方法只接受指定类型的消息
+- **客户端 `WSHandlers` 泛型优化**：泛型参数从 `MessageTypes extends string` 改为 `Messages extends WSMessage`，直接约束 `onMessage` 的消息类型
+- **`addHandler` 类型增强**：`types` 参数改为 `readonly` 数组，支持 `as const` 断言
+
 ## [1.5.0] - 2026-03-27
 
 ### 重构

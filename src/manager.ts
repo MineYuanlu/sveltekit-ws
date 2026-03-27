@@ -57,7 +57,7 @@ class WebSocketConnection implements WSConnection {
         }
     }
 
-    sendRaw(payload: string): boolean {
+    sendRaw(payload: Parameters<WebSocket['send']>[0]): boolean {
         if (this.ws.readyState !== 1) {
             return false;
         }
@@ -141,6 +141,22 @@ export class WebSocketManager implements WSManager {
             arr.push(handler);
         });
         this.handlers.push(handler);
+    }
+
+    /**
+     * 移除事件处理器
+     */
+    removeHandler(handler: WSHandlers): void {
+        const rem = (arr: WSHandlers<any>[]) => {
+            for (let i = arr.length - 1; i >= 0; i--) {
+                if (arr[i] === handler) arr.splice(i, 1);
+            }
+        };
+        rem(this.handlers);
+        this.msgHandler.forEach((arr, type) => {
+            rem(arr);
+            if (arr.length === 0) this.msgHandler.delete(type);
+        });
     }
 
     /**

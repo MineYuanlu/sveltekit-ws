@@ -34,7 +34,7 @@ export interface WSConnection {
      * @return 是否发送成功
      */
     send(message: WSMessage): boolean;
-    sendRaw(payload: string): boolean;
+    sendRaw(payload: Parameters<WebSocket['send']>[0]): boolean;
 
     disconnect(): boolean;
 }
@@ -162,6 +162,11 @@ export interface WSManager {
         type: MessageTypes[],
         handler: WSHandlers<MessageTypes>,
     ): void;
+
+    /**
+     * 移除事件处理器
+     */
+    removeHandler(handler: WSHandlers): void;
 
     /**
      * 获取事件处理器

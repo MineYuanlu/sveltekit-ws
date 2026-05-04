@@ -181,6 +181,104 @@ manager.addHandler(["game/move", "game/join"], gameHandlers);
 manager.init(logger);
 ```
 
+## Schema-Based Message Validation
+
+The `addWssSchemaHandler` function validates incoming messages against [Standard Schema V1](https://standardschema.dev/) schemas, providing type-safe `message.data` and configurable error handling. It works with Zod, Valibot, ArkType, or any other Standard Schema-compatible library — without bundling any specific validation library.
+
+### Basic Usage
+
+```typescript
+import { addWssSchemaHandler } from "@yuanlu_yl/sveltekit-ws/server";
+import { z } from "zod";
+
+addWssSchemaHandler(
+  {
+    "chat/send": z.object({ text: z.string(), roomId: z.string() }),
+    "chat/join": z.object({ roomId: z.string() }),
+  },
+  {
+    onMessage(connection, message) {
+      if (message.type === "chat/send") {
+        // message.data is typed as { text: string; roomId: string }
+        manager.broadcast({
+          type: "chat/receive",
+          data: { text: message.data.text, roomId: message.data.roomId },
+        });
+      } else if (message.type === "chat/join") {
+        // message.data is typed as { roomId: string }
+        connection.locals.currentRoom = message.data.roomId;
+      }
+    },
+  },
+  { sendError: "validation_error" }
+);
+```
+
+### Handling Invalid Messages
+
+Four strategies are available for handling validation failures:
+
+**1. `'ignore'` (default)** — silently drop invalid messages:
+
+```typescript
+addWssSchemaHandler(schemas, handlers); // invalid messages are ignored
+```
+
+**2. `'disconnect'`** — close the connection on invalid message:
+
+```typescript
+addWssSchemaHandler(schemas, handlers, "disconnect");
+```
+
+**3. `{ sendError: string }`** — send a typed error message back to the client:
+
+```typescript
+addWssSchemaHandler(schemas, handlers, { sendError: "validation_error" });
+// Client receives: { type: "validation_error", data: { issues: [...] } }
+```
+
+**4. `{ sendError, getData }`** — customize the error payload:
+
+```typescript
+addWssSchemaHandler(schemas, handlers, {
+  sendError: "validation_error",
+  getData: (issues) => ({ reason: issues[0].message }),
+});
+// Client receives: { type: "validation_error", data: { reason: "..." } }
+```
+
+**5. Custom function** — full control over the response:
+
+```typescript
+addWssSchemaHandler(
+  { "chat/send": z.object({ text: z.string() }) },
+  { onMessage(connection, message) { ... } },
+  (connection, message, issues) => {
+    console.warn("Validation failed:", message.type, issues);
+    connection.send({ type: "error", data: { reason: issues[0].message } });
+  }
+);
+```
+
+### Key Benefits
+
+- **Type-safe message data** via schema inference — no manual type annotations needed
+- **Works with any Standard Schema V1 library** (Zod, Valibot, ArkType, etc.)
+- **Zero runtime dependency** — the Standard Schema interface is embedded, not imported
+- **Tree-shakeable** — unused code is removed by your bundler
+- **Configurable validation failure handling** — ignore, disconnect, or respond with structured errors
+
+### Comparison with `addHandler`
+
+| Feature | `manager.addHandler()` | `addWssSchemaHandler()` |
+|---|---|---|
+| Validation | None — raw access to all messages | Automatic Standard Schema validation |
+| Type safety | Manual | Inferred from schema |
+| Error handling | Manual | Built-in strategies |
+| Flexibility | Maximum — handle any message format | Structured — schema-defined messages |
+
+Use `addHandler` when you need raw access to all messages or custom parsing logic. Use `addWssSchemaHandler` when you want automatic validation, type-safe data, and structured error handling.
+
 ## Connection Management
 
 ```typescript

@@ -2,6 +2,26 @@
 
 本项目 fork 自 [ketarketir/sveltekit-ws](https://github.com/ketarketir/sveltekit-ws)，基于 MIT 协议。
 
+## [1.5.2] - 2026-05-04
+
+### 新特性
+
+- **`addWssSchemaHandler` 消息验证处理器**：新增 `addWssSchemaHandler` 便捷函数，用于注册带自动消息验证的 WebSocket 处理器，基于 **Standard Schema V1**（https://standardschema.dev/）规范
+  - 支持所有实现 Standard Schema V1 的 schema 库：Zod 4+、Valibot 1+、ArkType 等
+  - 零运行时依赖 —— Standard Schema V1 接口直接内嵌在源码中，无需安装额外验证库
+  - Tree-shake 友好 —— 未导入时 bundler 会自动移除相关代码
+  - `type` 参数使用 `Record<string, StandardSchemaV1>` 映射消息类型到对应 schema，`handler.onMessage` 接收的 `message.data` 会根据 schema 的 `InferOutput` 自动推导类型
+- **`onBad` 验证失败策略**：支持四种验证失败处理方式：
+  - `'ignore'`（默认）：静默丢弃无效消息
+  - `'disconnect'`：直接关闭连接
+  - `{ sendError: string }`：自动向客户端发送错误消息，默认 payload 为 `{ originalType, issues }`
+  - `{ sendError, getData }`：自定义错误 payload 生成逻辑
+  - 自定义函数：`(connection, message, issues) => void | Promise<void>`，完全控制处理逻辑并可访问验证错误详情
+
+### 改进
+
+- 新增完整的 `addWssSchemaHandler` 单元测试覆盖，包含 schema 验证、类型推导、`onBad` 各种策略的测试用例
+
 ## [1.5.1] - 2026-03-27
 
 ### 新特性

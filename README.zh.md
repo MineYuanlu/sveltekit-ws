@@ -181,6 +181,76 @@ manager.addHandler(["game/move", "game/join"], gameHandlers);
 manager.init(logger);
 ```
 
+## 基于 Schema 的消息校验
+
+`addWssSchemaHandler` 使用 [Standard Schema V1](https://standardschema.dev/) 对入站消息进行自动校验，提供类型安全的 `message.data` 和可配置的失败处理。支持 Zod、Valibot、ArkType 等任何兼容 Standard Schema V1 的库。
+
+### 基本用法
+
+```typescript
+import { addWssSchemaHandler } from "@yuanlu_yl/sveltekit-ws/server";
+import { z } from "zod";
+
+addWssSchemaHandler(
+  {
+    "chat/send": z.object({ text: z.string(), roomId: z.string() }),
+    "chat/join": z.object({ roomId: z.string() }),
+  },
+  {
+    onMessage(connection, message) {
+      if (message.type === "chat/send") {
+        // message.data 类型推导为 { text: string; roomId: string }
+        manager.broadcast({
+          type: "chat/receive",
+          data: { text: message.data.text, roomId: message.data.roomId },
+        });
+      } else if (message.type === "chat/join") {
+        // message.data 类型推导为 { roomId: string }
+        connection.locals.currentRoom = message.data.roomId;
+      }
+    },
+  },
+  { sendError: "validation_error" },
+);
+```
+
+### 校验失败策略
+
+`addWssSchemaHandler` 提供多种策略处理校验失败消息，默认行为为静默丢弃：
+
+| 策略 | 说明 |
+|------|------|
+| `'ignore'`（默认） | 静默丢弃非法消息 |
+| `'disconnect'` | 立即断开连接 |
+| `{ sendError: string }` | 自动回发错误消息，类型为指定的 `string` |
+| `{ sendError, getData }` | 自定义错误载荷内容 |
+| 自定义函数 | 完全控制失败处理逻辑 |
+
+```typescript
+// 自定义函数示例
+addWssSchemaHandler(
+  { "chat/send": z.object({ text: z.string() }) },
+  { onMessage(connection, message) { ... } },
+  (connection, message, issues) => {
+    console.warn("校验失败:", message.type, issues);
+    connection.send({ type: "error", data: { reason: issues[0].message } });
+  },
+);
+```
+
+### 核心优势
+
+- 通过 Schema 推导实现类型安全的 `message.data`
+- 兼容任何 Standard Schema V1 库（Zod、Valibot 等）
+- 零运行时依赖 —— Standard Schema 接口直接内嵌在源码中
+- Tree-shake 友好 —— 未引用时自动被摇掉
+- 可配置的校验失败处理策略
+
+### 与 addHandler 的对比
+
+- `addHandler`：直接访问所有消息，无校验，更灵活
+- `addWssSchemaHandler`：自动校验、类型安全、结构化错误处理
+
 ## 连接管理
 
 ```typescript
